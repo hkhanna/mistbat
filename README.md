@@ -2,9 +2,9 @@
 ## Usage
 `python mistbat.py --help` - information on commands and options
 
-`python mistbat.py lsev [--remote-update]` - list all events
-`python mistbat.py lstx [--no-group]` - list all transactions
-`python mistbat.py holdings [--aggregated]` - list all current holdings
+- `python mistbat.py lsev [--remote-update]` - list all events
+- `python mistbat.py lstx [--no-group]` - list all transactions
+- `python mistbat.py holdings [--aggregated]` - list all current holdings
 
 ## Configuration
 All configuration files are stored in `~/.config/mistbat/` or another directory defined by the XDG_CONFIG_HOME environment variables.
@@ -36,8 +36,8 @@ Any manually specified observations go in this file. This would include things l
 ## How It Works
 ### Nomenclature 
 - "observations" (obs) are raw transaction data I'm getting from somewhere like coinbase
-  - "events" (ev) are objects Send, Receive, Exchange generated directly from observations
-  - "transactions" (tx) are SendReceive (a pair of Send and Receive events) or, if it's not a transaction between my wallets, it can be a Spend (lone Send) or Earn (lone Receive for earning/gaining money). It can also be ExchangeTx which is just an Exchange event promoted to a transaction.
+- "events" (ev) are objects Send, Receive, Exchange generated directly from observations
+- "transactions" (tx) are SendReceive (a pair of Send and Receive events) or, if it's not a transaction between my wallets, it can be a Spend (lone Send) or Earn (lone Receive for earning/gaining money). It can also be ExchangeTx which is just an Exchange event promoted to a transaction.
 
 ### Procedure
 1. Loads the transaction history for each exchange via the API if possible
