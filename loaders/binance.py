@@ -8,15 +8,15 @@ def update_from_remote():
     from binance.client import Client
     import yaml
 
-    keys = yaml.load(open(XDG_CONFIG_HOME + '/mistbat/secrets.yaml'))['binance']
-    client = Client(keys['api_key'], keys['secret_key'])
+    keys = yaml.load(open(XDG_CONFIG_HOME + "/mistbat/secrets.yaml"))["binance"]
+    client = Client(keys["api_key"], keys["secret_key"])
 
     deposits = client.get_deposit_history()
     withdraws = client.get_withdraw_history()
-    b_resources = {'deposits': deposits, 'withdraws': withdraws}
+    b_resources = {"deposits": deposits, "withdraws": withdraws}
 
     exchange_info = client.get_exchange_info()
-    all_pairs = [sym['symbol'] for sym in exchange_info['symbols']]
+    all_pairs = [sym["symbol"] for sym in exchange_info["symbols"]]
 
     trades = {}
     for pair in all_pairs:
@@ -25,10 +25,11 @@ def update_from_remote():
         # 500 trades max per pair
         assert len(trades[pair]) < 500
 
-    b_resources['trades'] = trades
+    b_resources["trades"] = trades
 
-    with open(XDG_DATA_HOME + '/mistbat/binance.json', 'w') as f:
+    with open(XDG_DATA_HOME + "/mistbat/binance.json", "w") as f:
         f.write(json.dumps(b_resources, indent=2))
+
 
 def parse_events():
     """Take json file of binance transactions and parse into Event instances.
@@ -40,38 +41,38 @@ def parse_events():
     events = []
 
     # Load up the JSON file
-    with open(XDG_DATA_HOME + '/mistbat/binance.json', 'r') as f:
+    with open(XDG_DATA_HOME + "/mistbat/binance.json", "r") as f:
         json_data = json.load(f)
 
-    for obs in json_data['deposits']['depositList']:
+    for obs in json_data["deposits"]["depositList"]:
         # Handle differing Bitcoin Cash symbols
-        if obs['asset'] == 'BCC':
-            obs['asset'] = 'BCH'
+        if obs["asset"] == "BCC":
+            obs["asset"] = "BCH"
 
         receive = Receive(
-            time=obs['insertTime'],
-            location='binance',
-            coin=obs['asset'],
-            amount=float(obs['amount']),
-            txid=obs['txId']
+            time=obs["insertTime"],
+            location="binance",
+            coin=obs["asset"],
+            amount=float(obs["amount"]),
+            txid=obs["txId"],
         )
         events.append(receive)
 
-    for obs in json_data['withdraws']['withdrawList']:
+    for obs in json_data["withdraws"]["withdrawList"]:
         # Handle differing Bitcoin Cash symbols
-        if obs['asset'] == 'BCC':
-            obs['asset'] = 'BCH'
+        if obs["asset"] == "BCC":
+            obs["asset"] = "BCH"
 
         send = Send(
-            time=obs['applyTime'],
-            location='binance',
-            coin=obs['asset'],
-            amount=float(obs['amount']),
-            txid=obs['txId']
+            time=obs["applyTime"],
+            location="binance",
+            coin=obs["asset"],
+            amount=float(obs["amount"]),
+            txid=obs["txId"],
         )
         events.append(send)
 
-    trades = json_data['trades']
+    trades = json_data["trades"]
     for pair in trades:
         if len(trades[pair]) == 0:
             continue
@@ -82,34 +83,33 @@ def parse_events():
         quote_currency = pair[3:]
 
         # Handle differing Bitcoin Cash symbols
-        if base_currency == 'BCC':
-            base_currency = 'BCH'
-        if quote_currency == 'BCC':
-            quote_currency = 'BCH'
+        if base_currency == "BCC":
+            base_currency = "BCH"
+        if quote_currency == "BCC":
+            quote_currency = "BCH"
 
         for obs in trades[pair]:
-            if obs['isBuyer']:
+            if obs["isBuyer"]:
                 buy_coin = base_currency
                 sell_coin = quote_currency
-                buy_amount = float(obs['qty'])
-                sell_amount = round(float(obs['price']) * float(obs['qty']), 8)
+                buy_amount = float(obs["qty"])
+                sell_amount = round(float(obs["price"]) * float(obs["qty"]), 8)
             else:
                 buy_coin = quote_currency
                 sell_coin = base_currency
-                sell_amount = float(obs['qty'])
-                buy_amount = round(float(obs['price']) * float(obs['qty']), 8)
+                sell_amount = float(obs["qty"])
+                buy_amount = round(float(obs["price"]) * float(obs["qty"]), 8)
 
             exchange = Exchange(
-                time=obs['time'],
-                location='binance',
+                time=obs["time"],
+                location="binance",
                 buy_coin=buy_coin,
                 buy_amount=buy_amount,
                 sell_coin=sell_coin,
                 sell_amount=sell_amount,
-                fee_with=obs['commissionAsset'],
-                fee_amount=float(obs['commission'])
+                fee_with=obs["commissionAsset"],
+                fee_amount=float(obs["commission"]),
             )
             events.append(exchange)
 
     return events
-

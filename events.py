@@ -4,7 +4,7 @@ import pytz
 import hashlib
 
 
-class Event():
+class Event:
     def __init__(self, **kwargs):
         for name, val in kwargs.items():
             setattr(self, name, val)
@@ -15,7 +15,6 @@ class Event():
         # Parse unix timestamps into datetime
         elif type(self.time) == int:
             self.time = datetime.datetime.fromtimestamp(self.time / 1e3, tz=pytz.utc)
-
 
         # Assume UTC timezone if not specified
         # Otherwise, convert to UTC
@@ -30,40 +29,49 @@ class Event():
     def generate_id(self):
         id = self.location[:3]
         # If there's an id provided by the exchange leverage that
-        if hasattr(self, 'location_id'):
-            id += '-' + self.location_id[-5:]
+        if hasattr(self, "location_id"):
+            id += "-" + self.location_id[-5:]
         # Otherwise, hash a few things we have to get the id
         else:
-            hashstr = (getattr(self, 'location', '') +
-                       str(self.time) +
-                       self.__class__.__name__ +
-                       getattr(self, 'coin', '') +
-                       getattr(self, 'buy_coin', '') +
-                       getattr(self, 'sell_coin', '') +
-                       str(getattr(self, 'amount', '')) +
-                       str(getattr(self, 'buy_amount', '')) +
-                       str(getattr(self, 'sell_amount', '')) +
-                       getattr(self, 'txid', ''))
-            id += '-' + hashlib.sha256(hashstr.encode()).hexdigest()[-5:]
+            hashstr = (
+                getattr(self, "location", "")
+                + str(self.time)
+                + self.__class__.__name__
+                + getattr(self, "coin", "")
+                + getattr(self, "buy_coin", "")
+                + getattr(self, "sell_coin", "")
+                + str(getattr(self, "amount", ""))
+                + str(getattr(self, "buy_amount", ""))
+                + str(getattr(self, "sell_amount", ""))
+                + getattr(self, "txid", "")
+            )
+            id += "-" + hashlib.sha256(hashstr.encode()).hexdigest()[-5:]
         self.id = id
 
 
 class Exchange(Event):
     def entries(self):
-        return ((self.location, self.buy_coin, self.buy_amount), (self.location, self.sell_coin, -self.sell_amount), (self.location, self.fee_with, -self.fee_amount))
+        return (
+            (self.location, self.buy_coin, self.buy_amount),
+            (self.location, self.sell_coin, -self.sell_amount),
+            (self.location, self.fee_with, -self.fee_amount),
+        )
 
     def __str__(self, alt_id=None):
         return "{} ({}) - EXCH {} {} -> {} {} [rate?] [fee?]".format(
-            self.time.strftime('%Y-%m-%d %H:%M:%S'),
+            self.time.strftime("%Y-%m-%d %H:%M:%S"),
             alt_id or self.id,
-            self.sell_coin, self.sell_amount,
-            self.buy_coin, self.buy_amount)
+            self.sell_coin,
+            self.sell_amount,
+            self.buy_coin,
+            self.buy_amount,
+        )
 
 
 class FiatExchange(Exchange):
     def __init__(self, **kwargs):
         Exchange.__init__(self, **kwargs)
-        if self.sell_coin == 'USD':
+        if self.sell_coin == "USD":
             self.investing = True
             self.redeeming = False
             self.rate = round(self.sell_amount / self.buy_amount, 2)
@@ -75,20 +83,28 @@ class FiatExchange(Exchange):
     def __str__(self, alt_id=None):
         if self.investing:
             return "{} ({}) - FXCH {} {} (+ USD {} fee) -> {} {} (@ USD {} per {})".format(
-                self.time.strftime('%Y-%m-%d %H:%M:%S'),
+                self.time.strftime("%Y-%m-%d %H:%M:%S"),
                 alt_id or self.id,
-                self.sell_coin, self.sell_amount,
+                self.sell_coin,
+                self.sell_amount,
                 self.fee_amount,
-                self.buy_coin, self.buy_amount,
-                self.rate, self.buy_coin)
+                self.buy_coin,
+                self.buy_amount,
+                self.rate,
+                self.buy_coin,
+            )
         else:
             return "{} ({}) - FXCH {} {} -> {} {} (+ USD {} fee) (@ USD {} per {})".format(
-                self.time.strftime('%Y-%m-%d %H:%M:%S'),
+                self.time.strftime("%Y-%m-%d %H:%M:%S"),
                 alt_id or self.id,
-                self.sell_coin, self.sell_amount,
-                self.buy_coin, self.buy_amount,
+                self.sell_coin,
+                self.sell_amount,
+                self.buy_coin,
+                self.buy_amount,
                 self.fee_amount,
-                self.rate, self.buy_coin)
+                self.rate,
+                self.buy_coin,
+            )
 
 
 class Send(Event):
@@ -97,10 +113,12 @@ class Send(Event):
 
     def __str__(self):
         return "{} ({}) - SEND {} {} from {}".format(
-            self.time.strftime('%Y-%m-%d %H:%M:%S'),
+            self.time.strftime("%Y-%m-%d %H:%M:%S"),
             self.id,
-            self.coin, self.amount,
-            self.location)
+            self.coin,
+            self.amount,
+            self.location,
+        )
 
 
 class Receive(Event):
@@ -109,10 +127,13 @@ class Receive(Event):
 
     def __str__(self):
         return "{} ({}) - RECV {} {} by {}".format(
-            self.time.strftime('%Y-%m-%d %H:%M:%S'),
+            self.time.strftime("%Y-%m-%d %H:%M:%S"),
             self.id,
-            self.coin, self.amount,
-            self.location)
+            self.coin,
+            self.amount,
+            self.location,
+        )
+
 
 def get_events(loaders, typ=None, remote_update=False):
     """Return events from exchange loaders.
@@ -128,7 +149,7 @@ def get_events(loaders, typ=None, remote_update=False):
 
     for loader in loaders:
         if remote_update:
-            print('Remote update from {}'.format(loader.__name__))
+            print("Remote update from {}".format(loader.__name__))
             loader.update_from_remote()
         all_events.extend(loader.parse_events())
 
@@ -146,4 +167,3 @@ def get_events(loaders, typ=None, remote_update=False):
             return [ev for ev in all_events if isinstance(ev, tuple(typ))]
         else:
             return [ev for ev in all_events if ev.__class__.__name__ == typ]
-
