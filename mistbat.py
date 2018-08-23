@@ -1,7 +1,7 @@
 import click
 import loaders
 from xdg import XDG_CONFIG_HOME
-import coinmarketcap
+from coinmarketcap import Market
 from events import get_events
 from transactions import get_transactions, annotate_transactions
 
@@ -21,6 +21,47 @@ def print_usd_exposure():
         )
     )
     print("Aggregate Fee %: {:.2f}%".format(fees * 100 / (invested - redeemed)))
+
+def get_coin_spot_prices(coins, max_requests=2, size_requests=100):
+    """Return spot prices of passed coin symbols.
+
+    Arguments:
+    coins (list of str) -- coins to get spot prices for
+    max_requests (int) -- maximum number of requests to the coinmarketcap API
+    size_requests (int) -- size of each request to coinmarketcap API (max: 100)
+    """
+    spot_prices = {}
+    for req in range(max_requests):
+        start = req * size_requests
+        batch = Market().ticker(start=start, limit=size_requests)
+        batch_size = len(batch["data"])
+        if batch_size != size_requests:
+            raise RuntimeError(f"Batch size {batch_size} does not match requested size {size_requests} on request number {req}")
+
+        for coin in batch["data"].values():
+            symbol = coin["symbol"]
+            if symbol not in coins or symbol in spot_prices:
+                # If two or more coins have the same symbol, this will use the higher-ranked one
+                continue
+
+            spot_prices[symbol] = coin["quotes"]["USD"]["price"]
+            if set(spot_prices.keys()) == coins:
+                return spot_prices
+    missing = coins - set(spot_prices.keys())
+    raise RuntimeError(f"Did not get spot prices for symbols: {missing} . Increase max_requests in get_spot_prices")
+
+    # for stat in coinstats["data"].values():
+    #     # If two or more coins have the same symbol, use the higher-ranked one
+    #     if stat["symbol"] in coin_spotprices:
+    #         continue
+    #     # Some coins are so worthless, their price is 'None'
+    #     usd_price = stat["quotes"]["USD"]["price"]
+    #     print(stat["symbol"], usd_price)
+    #     if usd_price is not None:
+    #         coin_spotprices[stat["symbol"]] = float(usd_price)
+    #     else:
+    #         coin_spotprices[stat["symbol"]] = 0.0
+    # return coin_spotprices
 
 
 @click.group()
@@ -109,18 +150,12 @@ def holdings(aggregated):
         totals.setdefault(location, {}).setdefault(coin, 0)
         totals[location][coin] += amount
 
+    # Get set of coin symbols to prepare to poll coinmarketcap API
+    my_coins = set(all_entries[1])
+    my_coins.remove('USD')
+
     # Poll coinmarketcap API for spot prices of all coins and store them in a dict
-    coinstats = coinmarketcap.Market().ticker(limit=0)
-    coin_spotprices = {}
-    for stat in coinstats:
-        # If two or more coins have the same symbol, use the higher-ranked one
-        if stat["symbol"] in coin_spotprices:
-            continue
-        # Some coins are so worthless, their price is 'None'
-        if stat["price_usd"] is not None:
-            coin_spotprices[stat["symbol"]] = float(stat["price_usd"])
-        else:
-            coin_spotprices[stat["symbol"]] = 0.0
+    coin_spotprices = get_coin_spot_prices(my_coins, max_requests=7)
 
     total_usd = 0
     location_usd = {}

@@ -1,3 +1,4 @@
+#pylint: disable=E1101
 import dateutil.parser
 import datetime
 import pytz
@@ -6,6 +7,7 @@ import hashlib
 
 class Event:
     def __init__(self, **kwargs):
+        self.time = None
         for name, val in kwargs.items():
             setattr(self, name, val)
 
