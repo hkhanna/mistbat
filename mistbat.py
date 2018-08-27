@@ -50,19 +50,6 @@ def get_coin_spot_prices(coins, max_requests=2, size_requests=100):
     missing = coins - set(spot_prices.keys())
     raise RuntimeError(f"Did not get spot prices for symbols: {missing} . Increase max_requests in get_spot_prices")
 
-    # for stat in coinstats["data"].values():
-    #     # If two or more coins have the same symbol, use the higher-ranked one
-    #     if stat["symbol"] in coin_spotprices:
-    #         continue
-    #     # Some coins are so worthless, their price is 'None'
-    #     usd_price = stat["quotes"]["USD"]["price"]
-    #     print(stat["symbol"], usd_price)
-    #     if usd_price is not None:
-    #         coin_spotprices[stat["symbol"]] = float(usd_price)
-    #     else:
-    #         coin_spotprices[stat["symbol"]] = 0.0
-    # return coin_spotprices
-
 
 @click.group()
 def cli():
