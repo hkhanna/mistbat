@@ -42,6 +42,7 @@ class ExchangeTx(Transaction):
 
 
 class FiatExchangeTx(ExchangeTx):
+    # TODO: START by adding a `calculate_tax` function
     pass
 
 
@@ -290,4 +291,14 @@ def annotate_transactions(transactions, tx_annotation_file):
             rtx.groups = groups
             rtx.annotated = True
 
+    return transactions
+
+
+def tax_transactions(transactions, asset_dict):
+    """Annotate transactions with Gain, AR, Basis, and Basis breakdown"""
+    assert all(
+        transactions[index].time <= transactions[index + 1].time
+        for index in range(len(transactions) - 1)
+    )
+    # TODO
     return transactions

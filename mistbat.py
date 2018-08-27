@@ -3,7 +3,7 @@ import loaders
 from xdg import XDG_CONFIG_HOME
 from coinmarketcap import Market
 from events import get_events
-from transactions import get_transactions, annotate_transactions
+from transactions import get_transactions, annotate_transactions, calculate_tax
 
 
 def print_usd_exposure():
@@ -88,6 +88,8 @@ def lstx(no_group):
     transactions = annotate_transactions(
         transactions, XDG_CONFIG_HOME + "/mistbat/tx_annotations.yaml"
     )
+    asset_dict = dict() 
+    transactions = calculate_tax(transactions, asset_dict)
 
     if no_group:
         transactions = [
