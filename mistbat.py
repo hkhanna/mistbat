@@ -1,9 +1,11 @@
 import click
 import loaders
+from prettytable import PrettyTable
 from xdg import XDG_CONFIG_HOME
 from coinmarketcap import Market
 from events import get_events
-from transactions import get_transactions, annotate_transactions, calculate_tax
+from transactions import get_transactions, annotate_transactions
+from tax import Form8949
 
 
 def print_usd_exposure():
@@ -22,6 +24,7 @@ def print_usd_exposure():
     )
     print("Aggregate Fee %: {:.2f}%".format(fees * 100 / (invested - redeemed)))
 
+
 def get_coin_spot_prices(coins, max_requests=2, size_requests=100):
     """Return spot prices of passed coin symbols.
 
@@ -36,7 +39,9 @@ def get_coin_spot_prices(coins, max_requests=2, size_requests=100):
         batch = Market().ticker(start=start, limit=size_requests)
         batch_size = len(batch["data"])
         if batch_size != size_requests:
-            raise RuntimeError(f"Batch size {batch_size} does not match requested size {size_requests} on request number {req}")
+            raise RuntimeError(
+                f"Batch size {batch_size} does not match requested size {size_requests} on request number {req}"
+            )
 
         for coin in batch["data"].values():
             symbol = coin["symbol"]
@@ -48,7 +53,9 @@ def get_coin_spot_prices(coins, max_requests=2, size_requests=100):
             if set(spot_prices.keys()) == coins:
                 return spot_prices
     missing = coins - set(spot_prices.keys())
-    raise RuntimeError(f"Did not get spot prices for symbols: {missing} . Increase max_requests in get_spot_prices")
+    raise RuntimeError(
+        f"Did not get spot prices for symbols: {missing} . Increase max_requests in get_spot_prices"
+    )
 
 
 @click.group()
@@ -88,8 +95,6 @@ def lstx(no_group):
     transactions = annotate_transactions(
         transactions, XDG_CONFIG_HOME + "/mistbat/tx_annotations.yaml"
     )
-    asset_dict = dict() 
-    transactions = calculate_tax(transactions, asset_dict)
 
     if no_group:
         transactions = [
@@ -103,6 +108,48 @@ def lstx(no_group):
     print("--------------------")
     print("{} total transactions".format(len(transactions)))
     print_usd_exposure()
+
+
+@cli.command()
+def tax():
+    """Generate the information needed for IRS Form 8949"""
+    events = get_events(loaders.all)
+    transactions = get_transactions(events, XDG_CONFIG_HOME + "/mistbat/tx_match.yaml")
+    transactions = annotate_transactions(
+        transactions, XDG_CONFIG_HOME + "/mistbat/tx_annotations.yaml"
+    )
+
+    form_8949 = Form8949(transactions)
+
+    print("SHORT-TERM CAPITAL GAINS")
+    table = PrettyTable(
+        [
+            "(a) Description of Property",
+            "(b) Date acquired",
+            "(c) Date sold or disposed",
+            "(d) Proceeds (sale price)",
+            "(e) Basis",
+            "(h) Gain",
+        ]
+    )
+    for line in form_8949.short_term():
+        table.add_row(line)
+    print(table)
+
+    print("LONG-TERM CAPITAL GAINS")
+    table = PrettyTable(
+        [
+            "(a) Description of Property",
+            "(b) Date acquired",
+            "(c) Date sold or disposed",
+            "(d) Proceeds (sale price)",
+            "(e) Basis",
+            "(h) Gain",
+        ]
+    )
+    for line in form_8949.long_term():
+        table.add_row(line)
+    print(table)
 
 
 @cli.command()
@@ -141,7 +188,7 @@ def holdings(aggregated):
 
     # Get set of coin symbols to prepare to poll coinmarketcap API
     my_coins = set(all_entries[1])
-    my_coins.remove('USD')
+    my_coins.remove("USD")
 
     # Poll coinmarketcap API for spot prices of all coins and store them in a dict
     coin_spotprices = get_coin_spot_prices(my_coins, max_requests=7)

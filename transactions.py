@@ -7,7 +7,7 @@ import yaml
 class Transaction:
     def description(self):
         notes = getattr(self, "notes", None)
-        groups = getattr(self, "groups", "None")
+        groups = getattr(self, "groups", "N/A")
         annotated = getattr(self, "annotated", False)
 
         desc = self.__str__()
@@ -42,8 +42,23 @@ class ExchangeTx(Transaction):
 
 
 class FiatExchangeTx(ExchangeTx):
-    # TODO: START by adding a `calculate_tax` function
     pass
+    # def calculate_tax(self, asset_dict):
+    #     """Annotate transaction with Gain, AR, Basis, and Basis breakdown"""
+    #     if self.investing:
+    #         coin = self.buy_coin
+    #         asset = asset_dict.get(coin, Asset(coin))
+    #         asset.buy(self.id, self.buy_amount, self.sell_amount)
+    #         self.tax_impact = f"Not a taxable event. {sell_amount} added to {coin} basis."
+    #         return { coin: asset }
+    #     else:
+    #         coin = self.sell_coin
+    #         assert hasattr(asset_dict, coin), f"Can't sell coin {coin} if it's not in the asset_dict'"
+    #         asset = asset_dict[coin]
+    #         self.tax_basis, transactions_used = asset.sell(self.sell_amount)
+    #         self.tax_amount_realized = self.buy_amount
+    #         self.tax_gain = self.tax_amount_realized - self.tax_basis
+    #         self.tax_impact = f"Gain: {tax_gain} (AR {tax_amount_realized} - Basis {self.tax_basis})"
 
 
 class SendReceive(Transaction):
@@ -291,14 +306,4 @@ def annotate_transactions(transactions, tx_annotation_file):
             rtx.groups = groups
             rtx.annotated = True
 
-    return transactions
-
-
-def tax_transactions(transactions, asset_dict):
-    """Annotate transactions with Gain, AR, Basis, and Basis breakdown"""
-    assert all(
-        transactions[index].time <= transactions[index + 1].time
-        for index in range(len(transactions) - 1)
-    )
-    # TODO
     return transactions
