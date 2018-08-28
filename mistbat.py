@@ -124,30 +124,30 @@ def tax():
     print("SHORT-TERM CAPITAL GAINS")
     table = PrettyTable(
         [
-            "(a) Description of Property",
+            "(a) Description",
             "(b) Date acquired",
-            "(c) Date sold or disposed",
-            "(d) Proceeds (sale price)",
+            "(c) Date sold",
+            "(d) Proceeds",
             "(e) Basis",
             "(h) Gain",
         ]
     )
-    for line in form_8949.short_term():
+    for line in form_8949.all_term():
         table.add_row(line)
     print(table)
 
-    print("LONG-TERM CAPITAL GAINS")
+    print("\nLONG-TERM CAPITAL GAINS")
     table = PrettyTable(
         [
-            "(a) Description of Property",
+            "(a) Description",
             "(b) Date acquired",
-            "(c) Date sold or disposed",
-            "(d) Proceeds (sale price)",
+            "(c) Date sold",
+            "(d) Proceeds",
             "(e) Basis",
             "(h) Gain",
         ]
     )
-    for line in form_8949.long_term():
+    for line in form_8949.all_term():
         table.add_row(line)
     print(table)
 

@@ -5,6 +5,12 @@ import yaml
 
 
 class Transaction:
+    def basis_contribution(self, coin):
+        return None  # TODO: raise NotImplementedError
+
+    def amount_realized(self, coin):
+        return None  # TODO: raise NotImplementedError
+
     def description(self):
         notes = getattr(self, "notes", None)
         groups = getattr(self, "groups", "N/A")
@@ -17,6 +23,30 @@ class Transaction:
             desc += "\n   |-> Groups: {}".format(groups)
 
         return desc
+
+    @property
+    def affected_coins(self):
+        # Sanity checking
+        if hasattr(self, "coin"):
+            assert not hasattr(self, "buy_coin")
+            assert not hasattr(self, "sell_coin")
+            affected = [self.coin]
+
+        elif hasattr(self, "buy_coin"):
+            assert hasattr(self, "sell_coin")
+            assert not hasattr(self, "coin")
+            affected = [self.buy_coin, self.sell_coin]
+
+        else:
+            # It's a shapeshift
+            assert not hasattr(self, "coin")
+            assert not hasattr(self, "buy_coin")
+            assert not hasattr(self, "sell_coin")
+            affected = [self.send.coin, self.receive.coin]
+
+        if "USD" in affected:
+            affected.remove("USD")
+        return affected
 
 
 class ExchangeTx(Transaction):
@@ -42,23 +72,23 @@ class ExchangeTx(Transaction):
 
 
 class FiatExchangeTx(ExchangeTx):
-    pass
-    # def calculate_tax(self, asset_dict):
-    #     """Annotate transaction with Gain, AR, Basis, and Basis breakdown"""
-    #     if self.investing:
-    #         coin = self.buy_coin
-    #         asset = asset_dict.get(coin, Asset(coin))
-    #         asset.buy(self.id, self.buy_amount, self.sell_amount)
-    #         self.tax_impact = f"Not a taxable event. {sell_amount} added to {coin} basis."
-    #         return { coin: asset }
-    #     else:
-    #         coin = self.sell_coin
-    #         assert hasattr(asset_dict, coin), f"Can't sell coin {coin} if it's not in the asset_dict'"
-    #         asset = asset_dict[coin]
-    #         self.tax_basis, transactions_used = asset.sell(self.sell_amount)
-    #         self.tax_amount_realized = self.buy_amount
-    #         self.tax_gain = self.tax_amount_realized - self.tax_basis
-    #         self.tax_impact = f"Gain: {tax_gain} (AR {tax_amount_realized} - Basis {self.tax_basis})"
+    def basis_contribution(self, coin):
+        """Returns tuple of (datetime of tx, number of coins bought, cost per coin including fees)"""
+        if self.investing:
+            assert coin == self.buy_coin
+            cost_per_coin = (self.sell_amount + self.fee_amount) / self.buy_amount
+            return [self.time, self.buy_amount, cost_per_coin]
+        else:
+            return None
+
+    def amount_realized(self, coin):
+        """Returns tuple of (datetime of tx, number of coins sold, amount sold per coin net of fees)"""
+        if self.investing:
+            return None
+        else:
+            assert coin == self.sell_coin
+            ar_per_coin = (self.buy_amount - self.fee_amount) / self.sell_amount
+            return [self.time, self.sell_amount, ar_per_coin]
 
 
 class SendReceive(Transaction):

@@ -1,3 +1,6 @@
+import pytz
+
+
 class Form8949(object):
     def __init__(self, transactions):
         self.method = "FIFO"  # This class only works for FIFO
@@ -47,41 +50,47 @@ class Asset(object):
         available_basis = []
 
         for tx_iter in self.transactions:
+            used_basis = []
+            matched_ar = 0.00
             available_basis += filter(None, [tx_iter.basis_contribution(self.coin)])
             amount_realized = tx_iter.amount_realized(self.coin)
-            # TODO: START: Eat up basis for AR
-            used_basis = []
+            if amount_realized:
+                # Match basis to amount realized
+                for basis in list(available_basis):
+                    if (amount_realized[1] - matched_ar) < basis[1]:
+                        # Chews up some but not all of this basis item
+                        available_basis[0][1] -= amount_realized[1]
+                        used_basis += [[basis[0], amount_realized[1], basis[2]]]
+                        matched_ar += amount_realized[1] - matched_ar
+                        break
+                    elif (amount_realized[1] - matched_ar) >= basis[1]:
+                        # Chews up all of or more than this basis item
+                        del available_basis[0]
+                        used_basis += basis
+                        matched_ar += amount_realized[1] - matched_ar
             if tx == tx_iter:
-                break
-
-        for row in used_basis:
-            pass  # TODO
-
-
-# class Asset(object):
-#     """Asset class used for tracking tax basis of each asset"""
-#     def __init__(self, coin):
-#         self.method = 'FIFO' # this class only works for FIFO
-#         self.coin = coin # coin means symbol basically, like "BTC" or "LTC"
-#         self.mutable_ledger = []
-
-#     def buy(self, tx_id, buy_amount, total_usd_cost):
-#         self.mutable_ledger.append((tx_id, buy_amount, total_usd_cost))
-
-#     def sell(self, sell_amount):
-#         """Returns combined basis of sold amounts"""
-#         tx_basis = 0.00
-#         transactions_used = []
-#         uncaptured_sell_amount = sell_amount
-#         for tx_id, ledger_amount, total_usd_cost in list(self.mutable_ledger):
-#             if uncaptured_sell_amount <= ledger_amount:
-#                 tx_basis += (uncaptured_sell_amount / ledger_amount) * total_usd_cost # use a proportional amount of the cost basis
-#                 uncaptured_sell_amount = 0.00
-#                 transactions_used.append(tx_id)
-#                 self.mutable_ledger[0][1] -= uncaptured_sell_amount
-#             else:
-#                 tx_basis += total_usd_cost
-#                 uncaptured_sell_amount -= ledger_amount
-#                 transactions_used.append(tx_id)
-#                 del self.mutable_ledger[0]
-#         return tx_basis, transactions_used
+                # If this is the transaction of interest, we need to report the used basis aka rows of 8949
+                # Map each item of used_basis into a row of Form 8949
+                rows = []
+                for basis in used_basis:
+                    description = f"{basis[1]} {self.coin}"
+                    date_acquired = basis[0].astimezone(
+                        pytz.timezone("America/Los_Angeles")
+                    )
+                    date_sold = amount_realized[0].astimezone(
+                        pytz.timezone("America/Los_Angeles")
+                    )
+                    proceeds = round(amount_realized[1] * amount_realized[2], 3)
+                    tx_basis = round(basis[1] * basis[2], 3)
+                    gain = proceeds - tx_basis
+                    rows.append(
+                        (
+                            description,
+                            date_acquired,
+                            date_sold,
+                            proceeds,
+                            tx_basis,
+                            gain,
+                        )
+                    )
+                return rows
