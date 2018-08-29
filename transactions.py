@@ -47,7 +47,10 @@ class Transaction:
         if "USD" in affected:
             affected.remove("USD")
         return affected
-
+    
+    @property
+    def fmv(self):
+        pass       
 
 class ExchangeTx(Transaction):
     def __init__(self, exchange):
@@ -134,6 +137,17 @@ class Spend(Transaction):
 
     def entries(self):
         return (self.coin, -self.amount)
+
+    def basis_contribution(self, coin):
+        """Spending coins does not add to available basis"""
+        return None
+        
+    def amount_realized(self, coin):
+        """Returns tuple of (datetime of tx, number of coins spend, fmv of each coin spent)"""
+        assert coin == self.coin
+        # Make sure fmv exists
+        # TODO: Handle fees - may need to create a self.effective_fmv that includes impact of fees
+        return [self.time, self.amount, self.fmv]
 
     def __getattr__(self, attr):
         return getattr(self.send, attr)

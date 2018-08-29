@@ -68,9 +68,14 @@ class Asset(object):
                         del available_basis[0]
                         used_basis += basis
                         matched_ar += amount_realized[1] - matched_ar
+                # TODO: assert matched_ar == amount_realized[1], "Not enough basis to match"
             if tx == tx_iter:
                 # If this is the transaction of interest, we need to report the used basis aka rows of 8949
                 # Map each item of used_basis into a row of Form 8949
+                if amount_realized is None:
+                    # If this is purely a basis-adding transaction, no rows to report
+                    return []
+
                 rows = []
                 for basis in used_basis:
                     description = f"{basis[1]} {self.coin}"
