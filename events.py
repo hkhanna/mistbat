@@ -11,6 +11,12 @@ class Event:
         for name, val in kwargs.items():
             setattr(self, name, val)
 
+        # Make sure that if buy_fmv is provided, so is sell_fmv and vice versa
+        if 'buy_fmv' in kwargs:
+            assert 'sell_fmv' in kwargs
+        if 'sell_fmv' in kwargs:
+            assert 'buy_fmv' in kwargs
+
         # Parse strings into datetime
         if type(self.time) == str:
             self.time = dateutil.parser.parse(self.time)

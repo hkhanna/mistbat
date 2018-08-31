@@ -1,10 +1,11 @@
 import click
 import loaders
+import yaml
 from prettytable import PrettyTable
-from xdg import XDG_CONFIG_HOME
+from xdg import XDG_CONFIG_HOME, XDG_DATA_HOME
 from coinmarketcap import Market
 from events import get_events
-from transactions import get_transactions, annotate_transactions
+from transactions import get_transactions, annotate_transactions, fmv_transactions
 from tax import Form8949
 
 
@@ -88,7 +89,13 @@ def lsev(remote_update):
     is_flag=True,
     default=False,
 )
-def lstx(no_group):
+@click.option(
+    "--minimal",
+    help="Omit annotations",
+    is_flag=True,
+    default=False,
+)
+def lstx(no_group, minimal):
     """List all transactions that have been derived from events and annotated."""
     events = get_events(loaders.all)
     transactions = get_transactions(events, XDG_CONFIG_HOME + "/mistbat/tx_match.yaml")
@@ -103,12 +110,44 @@ def lstx(no_group):
 
     # Print transactions
     for tx in transactions:
-        print(tx.description())
+        if minimal:
+            print(tx)
+        else:
+            print(tx.description())
 
     print("--------------------")
     print("{} total transactions".format(len(transactions)))
     print_usd_exposure()
 
+@cli.command()
+def updatefmv():
+    """Update the tx_fmv.yaml file for any missing figures"""
+    # Load storage file and events and transactions
+    fmv_data = yaml.load(open(XDG_DATA_HOME + '/mistbat/tx_fmv.yaml'))
+    events = get_events(loaders.all)
+    transactions = get_transactions(events, XDG_CONFIG_HOME + "/mistbat/tx_match.yaml")
+
+    # Filter out any fiat transactions since FMV is intrinsic in that transaction
+    transactions = [tx for tx in transactions if tx.__class__.__name__ != 'FiatExchangeTx']
+
+    # Identify missing transactions
+    missing = [tx for tx in transactions if tx.missing_fmv and tx.id not in fmv_data]
+
+    # Error-check that stored transactions have necessary FMV info
+    stored = [tx for tx in transactions if tx.id in fmv_data]
+    for tx in stored:
+        fmvs = fmv_data[tx.id].split(' -- ')[0].split()
+        if set(tx.affected_coins) != set(fmv.split('@')[0] for fmv in fmvs):
+            raise RuntimeError(f'Transaction {tx.id} does not have correct fmv info')
+    
+    # Confirm that the tx_fmv file doesn't have any unknown tx ids
+    diff = set(id for id in fmv_data) - set(tx.id for tx in transactions) 
+    diff = ', '.join(diff)
+    if len(diff) != 0:
+        raise RuntimeError(f'Unrecognized transaction ids in tx_fmv.yaml: {diff}. Tip: Dont inlude fiat transaction fmvs.')
+
+    # Fill remaining missing transactions with public closing price 
+    # START
 
 @cli.command()
 def tax():
@@ -117,6 +156,9 @@ def tax():
     transactions = get_transactions(events, XDG_CONFIG_HOME + "/mistbat/tx_match.yaml")
     transactions = annotate_transactions(
         transactions, XDG_CONFIG_HOME + "/mistbat/tx_annotations.yaml"
+    )
+    transactions = fmv_transactions(
+        transactions, XDG_DATA_HOME + "/mistbat/tx_fmv.yaml"
     )
 
     form_8949 = Form8949(transactions)

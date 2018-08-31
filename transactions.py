@@ -49,8 +49,11 @@ class Transaction:
         return affected
     
     @property
-    def fmv(self):
-        pass       
+    def missing_fmv(self):
+        if hasattr(self, 'fmv') or hasattr(self,'buy_fmv'):
+           return False
+        else:
+            return True
 
 class ExchangeTx(Transaction):
     def __init__(self, exchange):
@@ -146,7 +149,7 @@ class Spend(Transaction):
         """Returns tuple of (datetime of tx, number of coins spend, fmv of each coin spent)"""
         assert coin == self.coin
         # Make sure fmv exists
-        # TODO: Handle fees - may need to create a self.effective_fmv that includes impact of fees
+        # TODO: Handle fees (waiting on liqui loader) - may need to create a self.effective_fmv that includes impact of fees
         return [self.time, self.amount, self.fmv]
 
     def __getattr__(self, attr):
@@ -323,6 +326,37 @@ def get_transactions(events, tx_data_file):
 
 
 def annotate_transactions(transactions, tx_annotation_file):
+    """Annotate transactions with information in an annotation file."""
+    annotations = yaml.load(open(tx_annotation_file))
+
+    for ann_id, ann_data in annotations.items():
+        try:
+            (tx,) = [tx for tx in transactions if tx.id == ann_id]
+        except ValueError:
+            raise Exception("Bad annotation id: " + ann_id)
+
+        related_txids = ann_data.get("related", [])
+        groups = ann_data["groups"]
+        notes = ann_data["notes"]
+
+        tx.notes = notes
+        tx.groups = groups
+        tx.annotated = True
+
+        for rid in related_txids:
+            try:
+                (rtx,) = [tx for tx in transactions if tx.id == rid]
+            except ValueError:
+                raise Exception("Bad annotation id: " + rid)
+
+            rtx.notes = notes
+            rtx.groups = groups
+            rtx.annotated = True
+
+    return transactions
+
+def fmv_transactions(transactions, tx_annotation_file):
+    raise NotImplementedError
     """Annotate transactions with information in an annotation file."""
     annotations = yaml.load(open(tx_annotation_file))
 
