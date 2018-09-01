@@ -1,9 +1,11 @@
 import click
+import time
 import loaders
 import yaml
 from prettytable import PrettyTable
 from xdg import XDG_CONFIG_HOME, XDG_DATA_HOME
 from coinmarketcap import Market
+from cryptocompare import get_historical_close
 from events import get_events
 from transactions import get_transactions, annotate_transactions, fmv_transactions
 from tax import Form8949
@@ -120,10 +122,30 @@ def lstx(no_group, minimal):
     print_usd_exposure()
 
 @cli.command()
-def updatefmv():
+@click.option(
+    "--verbose",
+    help="Print progress",
+    is_flag=True,
+    default=False,
+)
+def updatefmv(verbose):
     """Update the tx_fmv.yaml file for any missing figures"""
     # Load storage file and events and transactions
-    fmv_data = yaml.load(open(XDG_DATA_HOME + '/mistbat/tx_fmv.yaml'))
+    try:
+        fmv_raw = yaml.load(open(XDG_DATA_HOME + '/mistbat/tx_fmv.yaml'))
+    except FileNotFoundError:
+        fmv_raw = {}
+    fmv_data = {}
+    for id in fmv_raw:
+        fmvs = fmv_raw[id].split(' -- ')
+        comment = None
+        if len(fmvs) == 2: # If there is a comment
+            comment = fmvs[1]
+        fmvs = fmvs[0].split()
+        fmvs = {fmv.split('@')[0]: fmv.split('@')[1] for fmv in fmvs}
+        fmvs['comment'] = comment
+        fmv_data[id] = fmvs
+
     events = get_events(loaders.all)
     transactions = get_transactions(events, XDG_CONFIG_HOME + "/mistbat/tx_match.yaml")
 
@@ -136,8 +158,9 @@ def updatefmv():
     # Error-check that stored transactions have necessary FMV info
     stored = [tx for tx in transactions if tx.id in fmv_data]
     for tx in stored:
-        fmvs = fmv_data[tx.id].split(' -- ')[0].split()
-        if set(tx.affected_coins) != set(fmv.split('@')[0] for fmv in fmvs):
+        stored_coins = set(fmv_data[tx.id].keys())
+        stored_coins.remove('comment')
+        if set(tx.affected_coins) != stored_coins:
             raise RuntimeError(f'Transaction {tx.id} does not have correct fmv info')
     
     # Confirm that the tx_fmv file doesn't have any unknown tx ids
@@ -147,7 +170,25 @@ def updatefmv():
         raise RuntimeError(f'Unrecognized transaction ids in tx_fmv.yaml: {diff}. Tip: Dont inlude fiat transaction fmvs.')
 
     # Fill remaining missing transactions with public closing price 
-    # START
+    print(f'{len(missing)} missing transactions') if verbose else None
+    for tx in missing:
+        print(f'{tx.id}')
+        fmv_data[tx.id] = { "comment": "from crytpocompare daily close api" }
+        for coin in tx.affected_coins:
+            coin_fmv = get_historical_close(coin, int(tx.time.timestamp()))
+            fmv_data[tx.id][coin] = coin_fmv
+            print(f'{coin}@{coin_fmv}\n') if verbose else None
+            time.sleep(0.1)
+        
+    # Convert fmv_data back into fmv_raw and dump to disk
+    fmv_raw = {}
+    for id, coins in fmv_data.items():
+        comment = coins.pop('comment')
+        fmv_raw[id] = ' '.join(f'{coin}@{price}' for coin, price in coins.items())
+        if comment:
+            fmv_raw[id] += ' -- ' + comment
+
+    yaml.dump(fmv_raw, open(XDG_DATA_HOME + '/mistbat/tx_fmv.yaml', 'w'), default_flow_style=False)
 
 @cli.command()
 def tax():
