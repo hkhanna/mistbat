@@ -50,6 +50,10 @@ class Transaction:
     
     @property
     def missing_fmv(self):
+        # All fiat transactions have fmv instrinsic in it.
+        if self.__class__.__name__ == 'FiatExchangeTx':
+            return False
+
         if hasattr(self, 'fmv') or hasattr(self,'buy_fmv'):
            return False
         else:
@@ -355,33 +359,34 @@ def annotate_transactions(transactions, tx_annotation_file):
 
     return transactions
 
-def fmv_transactions(transactions, tx_annotation_file):
-    raise NotImplementedError
-    """Annotate transactions with information in an annotation file."""
-    annotations = yaml.load(open(tx_annotation_file))
+def fmv_transactions(transactions, tx_fmv_file):
+    """Make sure all transactions have fmv information"""
+    fmv_raw = yaml.load(open(tx_fmv_file))
+    fmv_data = {}
+    for id in fmv_raw:
+        fmvs = fmv_raw[id].split(' -- ')
+        comment = None
+        if len(fmvs) == 2: # If there is a comment
+            comment = fmvs[1]
+        fmvs = fmvs[0].split()
+        fmvs = {fmv.split('@')[0]: fmv.split('@')[1] for fmv in fmvs}
+        fmvs['comment'] = comment
+        fmv_data[id] = fmvs
 
-    for ann_id, ann_data in annotations.items():
-        try:
-            (tx,) = [tx for tx in transactions if tx.id == ann_id]
-        except ValueError:
-            raise Exception("Bad annotation id: " + ann_id)
+    for tx in transactions:
+        if not tx.missing_fmv:
+            continue
+        fmvs = fmv_data[tx.id]
+        fmvs.pop("comment")
 
-        related_txids = ann_data.get("related", [])
-        groups = ann_data["groups"]
-        notes = ann_data["notes"]
+        if hasattr(tx, "coin"):
+            tx.fmv = float(fmvs[tx.coin])
+        elif hasattr(tx, "buy_coin"):
+            tx.buy_fmv = float(fmvs[tx.buy_coin])
+            tx.sell_fmv = float(fmvs[tx.sell_coin])
+        else:
+            # It's a shapeshift
+            tx.send.fmv = float(fmvs[tx.send.coin])
+            tx.receive.fmv = float(fmvs[tx.receive.coin])
 
-        tx.notes = notes
-        tx.groups = groups
-        tx.annotated = True
-
-        for rid in related_txids:
-            try:
-                (rtx,) = [tx for tx in transactions if tx.id == rid]
-            except ValueError:
-                raise Exception("Bad annotation id: " + rid)
-
-            rtx.notes = notes
-            rtx.groups = groups
-            rtx.annotated = True
-
-    return transactions
+    return transactions 

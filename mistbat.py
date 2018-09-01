@@ -149,9 +149,6 @@ def updatefmv(verbose):
     events = get_events(loaders.all)
     transactions = get_transactions(events, XDG_CONFIG_HOME + "/mistbat/tx_match.yaml")
 
-    # Filter out any fiat transactions since FMV is intrinsic in that transaction
-    transactions = [tx for tx in transactions if tx.__class__.__name__ != 'FiatExchangeTx']
-
     # Identify missing transactions
     missing = [tx for tx in transactions if tx.missing_fmv and tx.id not in fmv_data]
 

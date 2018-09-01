@@ -111,7 +111,7 @@ class FiatExchange(Exchange):
                 self.buy_amount,
                 self.fee_amount,
                 self.rate,
-                self.buy_coin,
+                self.sell_coin,
             )
 
 

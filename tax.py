@@ -57,17 +57,18 @@ class Asset(object):
             if amount_realized:
                 # Match basis to amount realized
                 for basis in list(available_basis):
+                    basis = list(basis)
                     if (amount_realized[1] - matched_ar) < basis[1]:
                         # Chews up some but not all of this basis item
-                        available_basis[0][1] -= amount_realized[1]
-                        used_basis += [[basis[0], amount_realized[1], basis[2]]]
+                        available_basis[0][1] -= (amount_realized[1] - matched_ar)
+                        used_basis += [[basis[0], (amount_realized[1] - matched_ar), basis[2]]]
                         matched_ar += amount_realized[1] - matched_ar
                         break
                     elif (amount_realized[1] - matched_ar) >= basis[1]:
                         # Chews up all of or more than this basis item
                         del available_basis[0]
-                        used_basis += basis
-                        matched_ar += amount_realized[1] - matched_ar
+                        used_basis += [basis]
+                        matched_ar += basis[1]
                 # TODO: assert matched_ar == amount_realized[1], "Not enough basis to match"
             if tx == tx_iter:
                 # If this is the transaction of interest, we need to report the used basis aka rows of 8949
@@ -78,16 +79,16 @@ class Asset(object):
 
                 rows = []
                 for basis in used_basis:
-                    description = f"{basis[1]} {self.coin}"
+                    description = f"{round(basis[1], 8)} {self.coin}"
                     date_acquired = basis[0].astimezone(
                         pytz.timezone("America/Los_Angeles")
                     )
                     date_sold = amount_realized[0].astimezone(
                         pytz.timezone("America/Los_Angeles")
                     )
-                    proceeds = round(amount_realized[1] * amount_realized[2], 3)
-                    tx_basis = round(basis[1] * basis[2], 3)
-                    gain = proceeds - tx_basis
+                    proceeds = round(basis[1] * amount_realized[2], 2)
+                    tx_basis = round(basis[1] * basis[2], 2)
+                    gain = round(proceeds - tx_basis, 2)
                     rows.append(
                         (
                             description,
