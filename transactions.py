@@ -181,6 +181,14 @@ class Earn(Transaction):
     def entries(self):
         return (self.coin, self.amount)
 
+    def basis_contribution(self, coin):
+        """Earning coins triggers income tax and you get a corresponding basis"""
+        return self.amount
+        
+    def amount_realized(self, coin):
+        """No amount realized for cap gains purposes when you earn crypto"""
+        return None
+
     def __getattr__(self, attr):
         return getattr(self.receive, attr)
 
