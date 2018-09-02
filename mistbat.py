@@ -132,6 +132,35 @@ def lstx(no_group, no_annotations, minimal):
     print_usd_exposure()
 
 @cli.command()
+def fees():
+    events = get_events(loaders.all)
+    transactions = get_transactions(events, XDG_CONFIG_HOME + "/mistbat/tx_match.yaml")
+    transactions = fmv_transactions(
+        transactions, XDG_DATA_HOME + "/mistbat/tx_fmv.yaml"
+    )
+    transactions = imply_fees(transactions)
+
+    print("\nFees Incurred")
+    print("-------------")
+    fees = {}
+    for tx in transactions:
+        fees[tx.__class__.__name__] = fees.get(tx.__class__.__name__, 0) + tx.fee_usd
+    for k, v in fees.items():
+        print(f"{k}: USD {v:0.2f}") 
+    print('TOTAL: USD {:0.2f}\n'.format(sum(fees.values())))
+
+    print("\nFees Incurred (negative values ignored)")
+    print("-----------------------------------------")
+    fees = {}
+    for tx in transactions:
+        fees[tx.__class__.__name__] = fees.get(tx.__class__.__name__, 0) + max(tx.fee_usd, 0)
+    for k, v in fees.items():
+        print(f"{k}: USD {v:0.2f}") 
+    print('TOTAL: USD {:0.2f}\n'.format(sum(fees.values())))
+
+
+
+@cli.command()
 @click.option(
     "--verbose",
     help="Print progress",

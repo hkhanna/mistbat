@@ -71,6 +71,11 @@ class Transaction:
         else:
             return True
 
+    @property
+    def fee_usd(self): 
+        raise NotImplementedError
+
+
 class ExchangeTx(Transaction):
     def __init__(self, exchange):
         self.exchange = exchange
@@ -101,6 +106,9 @@ class ExchangeTx(Transaction):
             round(self.buy_amount * self.buy_fmv, 2),
         )
 
+    @property
+    def fee_usd(self):
+        return self.implied_fee_usd
 
 class FiatExchangeTx(ExchangeTx):
     def basis_contribution(self, coin):
@@ -123,6 +131,10 @@ class FiatExchangeTx(ExchangeTx):
 
     def __str__(self):
         return self.exchange.__str__(self.id)
+    
+    @property
+    def fee_usd(self):
+        return self.fee_amount
 
 class SendReceive(Transaction):
     def __init__(self, send, receive):
@@ -157,6 +169,9 @@ class SendReceive(Transaction):
             self.destination,
         )
 
+    @property
+    def fee_usd(self):
+        return self.implied_fee * self.fmv
 
 class Spend(Transaction):
     def __init__(self, send):
@@ -193,6 +208,10 @@ class Spend(Transaction):
             self.location,
         )
 
+    @property
+    def fee_usd(self):
+        # FIXME
+        return 0.00
 
 class Earn(Transaction):
     def __init__(self, receive):
@@ -226,6 +245,9 @@ class Earn(Transaction):
             self.location,
         )
 
+    @property
+    def fee_usd(self):
+        return 0.00
 
 class Shapeshift(Transaction):
     def __init__(self, send, receive):
@@ -257,6 +279,10 @@ class Shapeshift(Transaction):
             round(self.receive.amount * self.receive.fmv, 2),
             self.receive.location,
         )
+    
+    @property
+    def fee_usd(self):
+        return self.implied_fee_usd
 
 
 def get_transactions(events, tx_data_file):
