@@ -7,7 +7,7 @@ from xdg import XDG_CONFIG_HOME, XDG_DATA_HOME
 from coinmarketcap import Market
 from cryptocompare import get_historical_close
 from events import get_events
-from transactions import get_transactions, annotate_transactions, fmv_transactions
+from transactions import get_transactions, annotate_transactions, fmv_transactions, imply_fees
 from tax import Form8949
 
 
@@ -92,18 +92,29 @@ def lsev(remote_update):
     default=False,
 )
 @click.option(
-    "--minimal",
+    "--no-annotations",
     help="Omit annotations",
     is_flag=True,
     default=False,
 )
-def lstx(no_group, minimal):
+@click.option(
+    "--minimal",
+    help="Omit everything other than headline",
+    is_flag=True,
+    default=False
+)
+def lstx(no_group, no_annotations, minimal):
     """List all transactions that have been derived from events and annotated."""
     events = get_events(loaders.all)
     transactions = get_transactions(events, XDG_CONFIG_HOME + "/mistbat/tx_match.yaml")
-    transactions = annotate_transactions(
-        transactions, XDG_CONFIG_HOME + "/mistbat/tx_annotations.yaml"
+    if not no_annotations:
+        transactions = annotate_transactions(
+            transactions, XDG_CONFIG_HOME + "/mistbat/tx_annotations.yaml"
+        )
+    transactions = fmv_transactions(
+        transactions, XDG_DATA_HOME + "/mistbat/tx_fmv.yaml"
     )
+    transactions = imply_fees(transactions)
 
     if no_group:
         transactions = [

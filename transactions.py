@@ -15,12 +15,24 @@ class Transaction:
         notes = getattr(self, "notes", None)
         groups = getattr(self, "groups", "N/A")
         annotated = getattr(self, "annotated", False)
+        reported_fee = getattr(self, "fee_amount", None)
+        implied_fee = getattr(self, "implied_fee_usd", None)
 
         desc = self.__str__()
         if notes:
             desc += "\n   |-> {}".format(notes)
         if annotated:
             desc += "\n   |-> Groups: {}".format(groups)
+        if implied_fee is not None:
+            desc += "\n   |-> Implied Fee: USD {}".format(self.implied_fee_usd)
+        if reported_fee is not None:
+            desc += "\n   |-> Reported Fee: {} {}".format(self.fee_amount, self.fee_with)
+            if self.fee_with != 'USD':
+                if self.fee_with == self.buy_coin:
+                    converted_fee = self.buy_fmv * self.fee_amount
+                elif self.fee_with == self.sell_coin:
+                    converted_fee = self.sell_fmv * self.fee_amount
+                desc += " ({:0.2f} USD)".format(converted_fee)
 
         return desc
 
@@ -54,7 +66,7 @@ class Transaction:
         if self.__class__.__name__ == 'FiatExchangeTx':
             return False
 
-        if hasattr(self, 'fmv') or hasattr(self,'buy_fmv'):
+        if getattr(self, 'fmv', None) or getattr(self, 'buy_fmv', None):
            return False
         else:
             return True
@@ -78,7 +90,16 @@ class ExchangeTx(Transaction):
         return getattr(self.exchange, attr)
 
     def __str__(self):
-        return self.exchange.__str__(self.id)
+        return "{} ({}) - EXCH {} {} (USD {}) -> {} {} (USD {})".format(
+            self.time.strftime("%Y-%m-%d %H:%M:%S"),
+            self.id,
+            self.sell_coin,
+            self.sell_amount,
+            round(self.sell_amount * self.sell_fmv, 2),
+            self.buy_coin,
+            self.buy_amount,
+            round(self.buy_amount * self.buy_fmv, 2),
+        )
 
 
 class FiatExchangeTx(ExchangeTx):
@@ -100,6 +121,8 @@ class FiatExchangeTx(ExchangeTx):
             ar_per_coin = (self.buy_amount - self.fee_amount) / self.sell_amount
             return [self.time, self.sell_amount, ar_per_coin]
 
+    def __str__(self):
+        return self.exchange.__str__(self.id)
 
 class SendReceive(Transaction):
     def __init__(self, send, receive):
@@ -207,8 +230,6 @@ class Shapeshift(Transaction):
         self.send = send
         self.receive = receive
         self.time = self.send.time  # Time is time of sending
-        self.fee_amount = 0  # FIXME TODO
-        self.fee_with = "USD"  # FIXME TODO
         self.generate_id()
 
     def generate_id(self):
@@ -222,14 +243,16 @@ class Shapeshift(Transaction):
         ]
 
     def __str__(self):
-        return "{} ({}) - SHAPESHIFT {} {} on {} -> {} {} on {} [fee?]".format(
+        return "{} ({}) - SHAPESHIFT {} {} (USD {}) on {} -> {} {} (USD {}) on {}".format(
             self.time.strftime("%Y-%m-%d %H:%M:%S"),
             self.id,
             self.send.coin,
             self.send.amount,
+            round(self.send.amount * self.send.fmv, 2),
             self.send.location,
             self.receive.coin,
             self.receive.amount,
+            round(self.receive.amount * self.receive.fmv, 2),
             self.receive.location,
         )
 
@@ -384,7 +407,10 @@ def fmv_transactions(transactions, tx_fmv_file):
     for tx in transactions:
         if not tx.missing_fmv:
             continue
-        fmvs = fmv_data[tx.id]
+        try:
+            fmvs = fmv_data[tx.id]
+        except KeyError:
+            raise RuntimeError(f"{tx.id} missing fmv information. Run updatefmv?")
         fmvs.pop("comment")
 
         if hasattr(tx, "coin"):
@@ -398,3 +424,14 @@ def fmv_transactions(transactions, tx_fmv_file):
             tx.receive.fmv = float(fmvs[tx.receive.coin])
 
     return transactions 
+
+def imply_fees(transactions):
+    """Imply the USD fees in Shapeshift or Exchange types based on fmv of the exchanged"""
+    for tx in transactions:
+        if tx.__class__.__name__ == 'ExchangeTx':
+            tx.implied_fee_usd = (tx.sell_amount * tx.sell_fmv) - (tx.buy_amount * tx.buy_fmv)
+            tx.implied_fee_usd = round(tx.implied_fee_usd, 2)
+        if tx.__class__.__name__ == 'Shapeshift':
+            tx.implied_fee_usd = (tx.send.amount * tx.send.fmv) - (tx.receive.amount * tx.receive.fmv)
+            tx.implied_fee_usd = round(tx.implied_fee_usd, 2)
+    return transactions

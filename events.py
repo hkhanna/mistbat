@@ -12,10 +12,10 @@ class Event:
             setattr(self, name, val)
 
         # Make sure that if buy_fmv is provided, so is sell_fmv and vice versa
-        if 'buy_fmv' in kwargs:
-            assert 'sell_fmv' in kwargs
-        if 'sell_fmv' in kwargs:
-            assert 'buy_fmv' in kwargs
+        if kwargs.get('buy_fmv'):
+            assert kwargs.get('sell_fmv') is not None
+        if kwargs.get('sell_fmv'):
+            assert kwargs.get('buy_fmv') is not None
 
         # Parse strings into datetime
         if type(self.time) == str:
@@ -65,10 +65,10 @@ class Exchange(Event):
             (self.location, self.fee_with, -self.fee_amount),
         )
 
-    def __str__(self, alt_id=None):
-        return "{} ({}) - EXCH {} {} -> {} {} [rate?] [fee?]".format(
+    def __str__(self):
+        return "{} ({}) - EXCH {} {} -> {} {}".format(
             self.time.strftime("%Y-%m-%d %H:%M:%S"),
-            alt_id or self.id,
+            self.id,
             self.sell_coin,
             self.sell_amount,
             self.buy_coin,

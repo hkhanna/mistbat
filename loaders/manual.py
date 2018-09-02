@@ -9,7 +9,6 @@ def update_from_remote():
 
 def parse_events():
     # Return Exchanges, Sends, Receives
-    # Does not parse into Coins
     events = []
 
     # Load up the YAML file
@@ -17,7 +16,6 @@ def parse_events():
         observations = yaml.load(f)
 
     for obs in observations:
-        # TODO: how are fees handled?
         if obs["type"] == "exchange":
             exchange = Exchange(
                 time=obs["time"],
@@ -26,10 +24,10 @@ def parse_events():
                 buy_amount=float(obs["buy_amount"]),
                 sell_coin=obs["sell_coin"],
                 sell_amount=float(obs["sell_amount"]),
-                buy_fmv=getattr(obs, "buy_fmv", None),
-                sell_fmv=getattr(obs, "sell_fmv", None),
-                fee_with=obs["buy_coin"],  # TODO FIXME
-                fee_amount=0,  # TODO FIXME
+                buy_fmv=obs.get("buy_fmv", None),
+                sell_fmv=obs.get("sell_fmv", None),
+                fee_with=obs.get("fee_with", None),
+                fee_amount=obs.get("fee_amount", None)
             )
             events.append(exchange)
 
@@ -40,7 +38,7 @@ def parse_events():
                 coin=obs["coin"],
                 amount=obs["amount"],
                 txid=obs["txid"],
-                fmv=getattr(obs, "fmv", None),
+                fmv=obs.get("fmv", None),
             )
             events.append(send)
 
@@ -51,7 +49,7 @@ def parse_events():
                 coin=obs["coin"],
                 amount=obs["amount"],
                 txid=obs["txid"],
-                fmv=getattr(obs, "fmv", None),
+                fmv=obs.get("fmv", None),
             )
             events.append(receive)
         else:
