@@ -133,7 +133,7 @@ class SendReceive(Transaction):
         self.destination = self.receive.location
         self.coin = self.send.coin
         self.amount = self.send.amount
-        self.fee = round(self.send.amount - self.receive.amount, 8)
+        self.implied_fee = round(self.send.amount - self.receive.amount, 8)
         self.generate_id()
 
     def entries(self):
@@ -144,13 +144,15 @@ class SendReceive(Transaction):
         self.id = "srtx-" + self.send.id[-2:] + "/" + self.receive.id[-2:]
 
     def __str__(self):
-        return "{} ({}) - SENDRECV {} {} (- {} {} fee) from {} to {}".format(
+        fee_converted = self.implied_fee * self.fmv
+        return "{} ({}) - SENDRECV {} {} (- {} {:f} / USD {:.2f} fee) from {} to {}".format(
             self.time.strftime("%Y-%m-%d %H:%M:%S"),
             self.id,
             self.coin,
             self.amount,
             self.coin,
-            self.fee,
+            self.implied_fee,
+            fee_converted,
             self.origin,
             self.destination,
         )

@@ -18,7 +18,6 @@ def print_usd_exposure():
     redeemed = round(sum(ev.buy_amount for ev in fiat_events if ev.redeeming), 2)
     net_invested = round(invested - redeemed, 2)
 
-    # TODO: should be able to handle things other than FiatExchange
     fees = round(sum(ev.fee_amount for ev in fiat_events), 2)
     print(
         "USD Exposure: {} + {} fees (FIAT ONLY) = {:.2f}".format(
