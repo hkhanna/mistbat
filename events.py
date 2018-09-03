@@ -65,7 +65,6 @@ class Exchange(Event):
         return (
             (self.location, self.buy_coin, self.buy_amount),
             (self.location, self.sell_coin, -self.sell_amount),
-            (self.location, self.fee_with, -self.fee_amount),
         )
 
     def __str__(self):
@@ -90,6 +89,13 @@ class FiatExchange(Exchange):
             self.investing = False
             self.redeeming = True
             self.rate = round(self.buy_amount / self.sell_amount, 2)
+
+    def entries(self):
+        return (
+            (self.location, self.buy_coin, self.buy_amount),
+            (self.location, self.sell_coin, -self.sell_amount),
+            (self.location, self.fee_with, -self.fee_amount),
+        )
 
     def __str__(self, alt_id=None):
         if self.investing:
