@@ -291,6 +291,25 @@ def tax(aggregate, year):
     print(table)
     print(f"TOTAL LONG-TERM CAPITAL GAIN: USD {total_gain:0.2f}")
 
+@cli.command()
+def currentbasis():
+    events = get_events(loaders.all)
+    transactions = get_transactions(events, XDG_CONFIG_HOME + "/mistbat/tx_match.yaml")
+    transactions = annotate_transactions(
+        transactions, XDG_CONFIG_HOME + "/mistbat/tx_annotations.yaml"
+    )
+    transactions = fmv_transactions(
+        transactions, XDG_DATA_HOME + "/mistbat/tx_fmv.yaml"
+    )
+    transactions = imply_fees(transactions)
+
+    form_8949 = Form8949(transactions)
+    print("\nAVAILABLE BASIS REPORT")
+    print("Note: This will slighly deviate from holdings results since SENDRECV fees do not impact basis.\n")
+    for coin, basis in form_8949.current_available_basis().items():
+        print(f"{coin}: USD {basis}")
+
+
 
 @cli.command()
 @click.option(

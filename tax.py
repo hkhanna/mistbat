@@ -30,6 +30,12 @@ class Form8949(object):
     def long_term(self):
         return [row for row in self.all_term() if _held_1yr(row[1], row[2])]
 
+    def current_available_basis(self):
+        basis = {}
+        for asset in self.assets.values():
+            basis[asset.coin] = round(asset.current_available_basis(), 8)
+        return basis
+
     def generate_form(self, term, aggregate, year):
         """Term argument is 'short', 'long' or 'all'. Aggregate is whether to have a single disposition that is traced to multiple acquisitions appear as a single row."""
         all_rows = []
@@ -51,6 +57,11 @@ class Asset(object):
     def add_tx(self, tx):
         self.transactions.append(tx)
 
+    def current_available_basis(self):
+        self.transactions.sort(key=lambda x: x.time)
+        available_basis = self._tx_used_basis(self.transactions[-1], True)
+        return sum(basis[1] for basis in available_basis)
+
     def tax_history(self, term, aggregate, year):
         self.transactions.sort(key=lambda x: x.time)
         tax_history = []
@@ -63,7 +74,7 @@ class Asset(object):
                 tax_history.extend(tax_impact)
         return tax_history
 
-    def _tx_used_basis(self, tx):
+    def _tx_used_basis(self, tx, return_available_basis=False):
         """Return an array that represents a row of Form 8949"""
         assert tx in self.transactions
         available_basis = []
@@ -90,7 +101,10 @@ class Asset(object):
                         matched_ar += basis[1]
                 assert matched_ar == amount_realized[1], "Not enough basis to match"
             if tx == tx_iter:
-                return used_basis
+                if return_available_basis:
+                    return available_basis
+                else:
+                    return used_basis
 
     def _tax_impact(self, tx, used_basis, term, aggregate):
         # If this is the transaction of interest, we need to report the used basis aka rows of 8949
