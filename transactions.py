@@ -106,6 +106,23 @@ class ExchangeTx(Transaction):
             round(self.buy_amount * self.buy_fmv, 2),
         )
 
+    def basis_contribution(self, coin):
+        """Returns tuple of (datetime of tx, number of coins received, cost per coin)
+        Fees are not added to basis here. They are instead removed from the amount realized of the ExchangeTx"""
+        if coin == self.buy_coin:
+           return [self.time, self.buy_amount, self.buy_fmv]
+        else:
+            return None
+    
+    def amount_realized(self, coin):
+        """Returns tuple of (datetime of tx, number of coins exchanged, amount sold per coin net of fees)"""
+        if coin == self.sell_coin:
+            fee = max(0, self.fee_usd) # Ignore the fee if its negative
+            ar_per_coin = ((self.sell_amount * self.sell_fmv) - fee) / self.sell_amount
+            return [self.time, self.sell_amount, ar_per_coin]
+        else:
+            return None
+
     @property
     def fee_usd(self):
         return self.implied_fee_usd
@@ -168,6 +185,14 @@ class SendReceive(Transaction):
             self.origin,
             self.destination,
         )
+
+    def basis_contribution(self, coin):
+        """This takes the position blockchain fees dont add to basis."""
+        return None
+    
+    def amount_realized(self, coin):
+        """This takes the position blockchain fees don't trigger any AR."""
+        return None
 
     @property
     def fee_usd(self):
@@ -279,7 +304,24 @@ class Shapeshift(Transaction):
             round(self.receive.amount * self.receive.fmv, 2),
             self.receive.location,
         )
+ 
+    def basis_contribution(self, coin):
+        """Returns tuple of (datetime of tx, number of coins received, cost per coin)
+        Fees are not added to basis here. They are instead removed from the amount realized of the Shapeshift"""
+        if coin == self.receive.coin:
+           return [self.time, self.receive.amount, self.receive.fmv]
+        else:
+            return None
     
+    def amount_realized(self, coin):
+        """Returns tuple of (datetime of tx, number of coins exchanged, amount sold per coin net of fees)"""
+        if coin == self.send.coin:
+            fee = max(0, self.fee_usd) # Ignore the fee if its negative
+            ar_per_coin = ((self.send.amount * self.send.fmv) - fee) / self.send.amount
+            return [self.time, self.send.amount, ar_per_coin]
+        else:
+            return None
+
     @property
     def fee_usd(self):
         return self.implied_fee_usd

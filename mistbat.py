@@ -237,6 +237,7 @@ def tax():
     transactions = fmv_transactions(
         transactions, XDG_DATA_HOME + "/mistbat/tx_fmv.yaml"
     )
+    transactions = imply_fees(transactions)
 
     form_8949 = Form8949(transactions)
 
