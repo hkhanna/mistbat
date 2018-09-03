@@ -31,9 +31,12 @@ class Event:
         else:
             self.time = self.time.astimezone(pytz.utc)
 
-        # Generate unique ID based on available info
+       # Generate unique ID based on available info
         self.generate_id()
 
+        # Get rid of any sub-second resolution
+        self.time = self.time.replace(microsecond=0)
+ 
     def generate_id(self):
         id = self.location[:3]
         # If there's an id provided by the exchange leverage that

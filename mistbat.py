@@ -252,7 +252,7 @@ def tax():
             "(h) Gain",
         ]
     )
-    for line in form_8949.all_term():
+    for line in form_8949.short_term():
         table.add_row(line)
     print(table)
 
@@ -267,7 +267,7 @@ def tax():
             "(h) Gain",
         ]
     )
-    for line in form_8949.all_term():
+    for line in form_8949.long_term():
         table.add_row(line)
     print(table)
 

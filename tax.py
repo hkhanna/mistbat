@@ -1,4 +1,13 @@
 import pytz
+import datetime as dt
+
+def _held_1yr(acquired, disposed):
+    acquired = acquired.date()
+    min_date = dt.date(year= acquired.year + 1, month=acquired.month, day= acquired.day + 1)
+    if disposed.date() >= min_date:
+        return True
+    else:
+        return False
 
 
 class Form8949(object):
@@ -15,10 +24,10 @@ class Form8949(object):
         return assets
 
     def short_term(self):
-        pass  # TODO
+        return [row for row in self.all_term() if not _held_1yr(row[1], row[2])]
 
     def long_term(self):
-        pass  # TODO
+        return [row for row in self.all_term() if _held_1yr(row[1], row[2])]
 
     def all_term(self):
         all_rows = []
