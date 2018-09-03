@@ -227,7 +227,13 @@ def updatefmv(verbose):
     yaml.dump(fmv_raw, open(XDG_DATA_HOME + '/mistbat/tx_fmv.yaml', 'w'), default_flow_style=False)
 
 @cli.command()
-def tax():
+@click.option(
+    "--aggregate",
+    help="Aggregate single dispositions that can be traced to multiple acquisitions",
+    is_flag=True,
+    default=False,
+)
+def tax(aggregate):
     """Generate the information needed for IRS Form 8949"""
     events = get_events(loaders.all)
     transactions = get_transactions(events, XDG_CONFIG_HOME + "/mistbat/tx_match.yaml")
@@ -252,9 +258,13 @@ def tax():
             "(h) Gain",
         ]
     )
-    for line in form_8949.short_term():
+    total_gain = 0.00
+    for line in form_8949.generate_form(term='short', aggregate=aggregate):
         table.add_row(line)
+        if str(line[-1]).strip():
+            total_gain += line[-1]
     print(table)
+    print(f"TOTAL SHORT-TERM CAPITAL GAIN: USD {total_gain:0.2f}")
 
     print("\nLONG-TERM CAPITAL GAINS")
     table = PrettyTable(
@@ -267,9 +277,11 @@ def tax():
             "(h) Gain",
         ]
     )
-    for line in form_8949.long_term():
+    total_gain = 0.00
+    for line in form_8949.generate_form(term='long', aggregate=aggregate):
         table.add_row(line)
     print(table)
+    print(f"TOTAL LONG-TERM CAPITAL GAIN: USD {total_gain:0.2f}")
 
 
 @cli.command()
