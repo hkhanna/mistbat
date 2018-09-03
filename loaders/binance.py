@@ -19,7 +19,10 @@ def update_from_remote():
     all_pairs = [sym["symbol"] for sym in exchange_info["symbols"]]
 
     trades = {}
-    for pair in all_pairs:
+    print(f"Total pairs to loop through: {len(all_pairs)}")
+    for index, pair in enumerate(all_pairs ):
+        if index % 10 == 0:
+            print(f"Currently: {index}")
         trades[pair] = client.get_my_trades(symbol=pair)
 
         # 500 trades max per pair

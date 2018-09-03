@@ -383,6 +383,18 @@ def holdings(aggregated):
     print("-----------------")
     print("Total Portfolio Value: USD {:.2f}".format(total_usd))
 
+@cli.command()
+@click.argument('exchange')
+def remoteupdate(exchange):
+    """Fetch updated coinbase information from remote"""
+    if exchange == 'coinbase':
+        loaders.coinbase.update_from_remote()
+    elif exchange == 'gdax':
+        loaders.gdax.update_from_remote()
+    elif exchange == 'binance':
+        loaders.binance.update_from_remote()
+    else:
+        print("Bad exchange specified.")
 
 if __name__ == "__main__":
     cli()

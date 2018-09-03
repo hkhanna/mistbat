@@ -6,10 +6,10 @@ import yaml
 
 class Transaction:
     def basis_contribution(self, coin):
-        return None  # TODO: raise NotImplementedError
+        raise NotImplementedError
 
     def amount_realized(self, coin):
-        return None  # TODO: raise NotImplementedError
+        raise NotImplementedError
 
     def description(self):
         notes = getattr(self, "notes", None)

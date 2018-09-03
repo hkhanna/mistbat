@@ -12,12 +12,16 @@ def update_from_remote():
         keys["api_key"], keys["secret_key"], keys["passphrase"]
     )
 
+    # Get list of USD products
+    product_ids = [p["id"] for p in client.get_products() if p["id"][-3:] == 'USD']
+
     # Exchange history is in the "fills" API
     # No need for deposit/withdrawal info since that is in the Coinbase data
-    fills_paginated = client.get_fills()
     fills = []
-    for page in fills_paginated:
-        fills.extend(page)
+    for product_id in product_ids:
+        fills_paginated = client.get_fills(product_id=product_id)
+        for page in fills_paginated:
+            fills.extend(page)
 
     with open(XDG_DATA_HOME + "/mistbat/gdax.json", "w") as f:
         f.write(json.dumps(fills, indent=2))
