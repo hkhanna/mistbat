@@ -233,7 +233,13 @@ def updatefmv(verbose):
     is_flag=True,
     default=False,
 )
-def tax(aggregate):
+@click.option(
+    "--year",
+    help="Limit report to a particular year",
+    is_flag=False,
+    default=None
+)
+def tax(aggregate, year):
     """Generate the information needed for IRS Form 8949"""
     events = get_events(loaders.all)
     transactions = get_transactions(events, XDG_CONFIG_HOME + "/mistbat/tx_match.yaml")
@@ -259,7 +265,7 @@ def tax(aggregate):
         ]
     )
     total_gain = 0.00
-    for line in form_8949.generate_form(term='short', aggregate=aggregate):
+    for line in form_8949.generate_form(term='short', aggregate=aggregate, year=year):
         table.add_row(line)
         if str(line[-1]).strip():
             total_gain += line[-1]
@@ -278,8 +284,10 @@ def tax(aggregate):
         ]
     )
     total_gain = 0.00
-    for line in form_8949.generate_form(term='long', aggregate=aggregate):
+    for line in form_8949.generate_form(term='long', aggregate=aggregate, year=year):
         table.add_row(line)
+        if str(line[-1]).strip():
+            total_gain += line[-1]
     print(table)
     print(f"TOTAL LONG-TERM CAPITAL GAIN: USD {total_gain:0.2f}")
 

@@ -173,15 +173,13 @@ class SendReceive(Transaction):
         self.id = "srtx-" + self.send.id[-2:] + "/" + self.receive.id[-2:]
 
     def __str__(self):
-        fee_converted = self.implied_fee * self.fmv
-        return "{} ({}) - SENDRECV {} {} (- {} {:f} / USD {:.2f} fee) from {} to {}".format(
+        return "{} ({}) - SENDRECV {} {} (- {} {:f} fee) from {} to {}".format(
             self.time.strftime("%Y-%m-%d %H:%M:%S"),
             self.id,
             self.coin,
             self.amount,
             self.coin,
             self.implied_fee,
-            fee_converted,
             self.origin,
             self.destination,
         )
@@ -504,4 +502,6 @@ def imply_fees(transactions):
         if tx.__class__.__name__ == 'Shapeshift':
             tx.implied_fee_usd = (tx.send.amount * tx.send.fmv) - (tx.receive.amount * tx.receive.fmv)
             tx.implied_fee_usd = round(tx.implied_fee_usd, 2)
+        if tx.__class__.__name__ == 'SendReceive':
+            tx.implied_fee_usd = tx.implied_fee * tx.fmv
     return transactions

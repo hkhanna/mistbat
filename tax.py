@@ -30,11 +30,11 @@ class Form8949(object):
     def long_term(self):
         return [row for row in self.all_term() if _held_1yr(row[1], row[2])]
 
-    def generate_form(self, term='all', aggregate=False):
+    def generate_form(self, term, aggregate, year):
         """Term argument is 'short', 'long' or 'all'. Aggregate is whether to have a single disposition that is traced to multiple acquisitions appear as a single row."""
         all_rows = []
         for asset in self.assets.values():
-            tax_history = asset.tax_history(term, aggregate)
+            tax_history = asset.tax_history(term, aggregate, year)
             if len(tax_history):
                 all_rows.append([' ']*6)
             all_rows.extend(tax_history)
@@ -51,10 +51,12 @@ class Asset(object):
     def add_tx(self, tx):
         self.transactions.append(tx)
 
-    def tax_history(self, term, aggregate):
+    def tax_history(self, term, aggregate, year):
         self.transactions.sort(key=lambda x: x.time)
         tax_history = []
         for tx in self.transactions:
+            if year and tx.time.year != int(year):
+                continue
             used_basis = self._tx_used_basis(tx) # What basis did the tx use up, if any.
             tax_impact = self._tax_impact(tx, used_basis, term, aggregate) # Calculate the tax impact of the tx based on the used basis and in the way we specify
             if tax_impact:
