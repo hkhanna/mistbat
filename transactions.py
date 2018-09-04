@@ -26,8 +26,10 @@ class Transaction:
         if implied_fee is not None:
             desc += "\n   |-> Implied Fee: USD {}".format(self.implied_fee_usd)
         if reported_fee is not None:
-            desc += "\n   |-> Reported Fee: {} {}".format(self.fee_amount, self.fee_with)
-            if self.fee_with != 'USD':
+            desc += "\n   |-> Reported Fee: {} {}".format(
+                self.fee_amount, self.fee_with
+            )
+            if self.fee_with != "USD":
                 if self.fee_with == self.buy_coin:
                     converted_fee = self.buy_fmv * self.fee_amount
                 elif self.fee_with == self.sell_coin:
@@ -59,20 +61,20 @@ class Transaction:
         if "USD" in affected:
             affected.remove("USD")
         return affected
-    
+
     @property
     def missing_fmv(self):
         # All fiat transactions have fmv instrinsic in it.
-        if self.__class__.__name__ == 'FiatExchangeTx':
+        if self.__class__.__name__ == "FiatExchangeTx":
             return False
 
-        if getattr(self, 'fmv', None) or getattr(self, 'buy_fmv', None):
-           return False
+        if getattr(self, "fmv", None) or getattr(self, "buy_fmv", None):
+            return False
         else:
             return True
 
     @property
-    def fee_usd(self): 
+    def fee_usd(self):
         raise NotImplementedError
 
 
@@ -110,14 +112,14 @@ class ExchangeTx(Transaction):
         """Returns tuple of (datetime of tx, number of coins received, cost per coin)
         Fees are not added to basis here. They are instead removed from the amount realized of the ExchangeTx"""
         if coin == self.buy_coin:
-           return [self.time, self.buy_amount, self.buy_fmv]
+            return [self.time, self.buy_amount, self.buy_fmv]
         else:
             return None
-    
+
     def amount_realized(self, coin):
         """Returns tuple of (datetime of tx, number of coins exchanged, amount sold per coin net of fees)"""
         if coin == self.sell_coin:
-            fee = max(0, self.fee_usd) # Ignore the fee if its negative
+            fee = max(0, self.fee_usd)  # Ignore the fee if its negative
             ar_per_coin = ((self.sell_amount * self.sell_fmv) - fee) / self.sell_amount
             return [self.time, self.sell_amount, ar_per_coin]
         else:
@@ -126,6 +128,7 @@ class ExchangeTx(Transaction):
     @property
     def fee_usd(self):
         return self.implied_fee_usd
+
 
 class FiatExchangeTx(ExchangeTx):
     def basis_contribution(self, coin):
@@ -148,10 +151,11 @@ class FiatExchangeTx(ExchangeTx):
 
     def __str__(self):
         return self.exchange.__str__(self.id)
-    
+
     @property
     def fee_usd(self):
         return self.fee_amount
+
 
 class SendReceive(Transaction):
     def __init__(self, send, receive):
@@ -187,7 +191,7 @@ class SendReceive(Transaction):
     def basis_contribution(self, coin):
         """This takes the position blockchain fees dont add to basis."""
         return None
-    
+
     def amount_realized(self, coin):
         """This takes the position blockchain fees don't trigger any AR."""
         return None
@@ -195,6 +199,7 @@ class SendReceive(Transaction):
     @property
     def fee_usd(self):
         return self.implied_fee * self.fmv
+
 
 class Spend(Transaction):
     def __init__(self, send):
@@ -211,12 +216,11 @@ class Spend(Transaction):
     def basis_contribution(self, coin):
         """Spending coins does not add to available basis"""
         return None
-        
+
     def amount_realized(self, coin):
         """Returns tuple of (datetime of tx, number of coins spend, fmv of each coin spent)"""
         assert coin == self.coin
         # Make sure fmv exists
-        # TODO: Handle fees (waiting on liqui loader) - may need to create a self.effective_fmv that includes impact of fees
         return [self.time, self.amount, self.fmv]
 
     def __getattr__(self, attr):
@@ -231,10 +235,6 @@ class Spend(Transaction):
             self.location,
         )
 
-    @property
-    def fee_usd(self):
-        # FIXME
-        return 0.00
 
 class Earn(Transaction):
     def __init__(self, receive):
@@ -251,7 +251,7 @@ class Earn(Transaction):
     def basis_contribution(self, coin):
         """Earning coins triggers income tax and you get a corresponding basis"""
         return self.amount
-        
+
     def amount_realized(self, coin):
         """No amount realized for cap gains purposes when you earn crypto"""
         return None
@@ -271,6 +271,7 @@ class Earn(Transaction):
     @property
     def fee_usd(self):
         return 0.00
+
 
 class Shapeshift(Transaction):
     def __init__(self, send, receive):
@@ -302,19 +303,19 @@ class Shapeshift(Transaction):
             round(self.receive.amount * self.receive.fmv, 2),
             self.receive.location,
         )
- 
+
     def basis_contribution(self, coin):
         """Returns tuple of (datetime of tx, number of coins received, cost per coin)
         Fees are not added to basis here. They are instead removed from the amount realized of the Shapeshift"""
         if coin == self.receive.coin:
-           return [self.time, self.receive.amount, self.receive.fmv]
+            return [self.time, self.receive.amount, self.receive.fmv]
         else:
             return None
-    
+
     def amount_realized(self, coin):
         """Returns tuple of (datetime of tx, number of coins exchanged, amount sold per coin net of fees)"""
         if coin == self.send.coin:
-            fee = max(0, self.fee_usd) # Ignore the fee if its negative
+            fee = max(0, self.fee_usd)  # Ignore the fee if its negative
             ar_per_coin = ((self.send.amount * self.send.fmv) - fee) / self.send.amount
             return [self.time, self.send.amount, ar_per_coin]
         else:
@@ -458,18 +459,19 @@ def annotate_transactions(transactions, tx_annotation_file):
 
     return transactions
 
+
 def fmv_transactions(transactions, tx_fmv_file):
     """Make sure all transactions have fmv information"""
     fmv_raw = yaml.load(open(tx_fmv_file))
     fmv_data = {}
     for id in fmv_raw:
-        fmvs = fmv_raw[id].split(' -- ')
+        fmvs = fmv_raw[id].split(" -- ")
         comment = None
-        if len(fmvs) == 2: # If there is a comment
+        if len(fmvs) == 2:  # If there is a comment
             comment = fmvs[1]
         fmvs = fmvs[0].split()
-        fmvs = {fmv.split('@')[0]: fmv.split('@')[1] for fmv in fmvs}
-        fmvs['comment'] = comment
+        fmvs = {fmv.split("@")[0]: fmv.split("@")[1] for fmv in fmvs}
+        fmvs["comment"] = comment
         fmv_data[id] = fmvs
 
     for tx in transactions:
@@ -491,17 +493,22 @@ def fmv_transactions(transactions, tx_fmv_file):
             tx.send.fmv = float(fmvs[tx.send.coin])
             tx.receive.fmv = float(fmvs[tx.receive.coin])
 
-    return transactions 
+    return transactions
+
 
 def imply_fees(transactions):
     """Imply the USD fees in Shapeshift or Exchange types based on fmv of the exchanged"""
     for tx in transactions:
-        if tx.__class__.__name__ == 'ExchangeTx':
-            tx.implied_fee_usd = (tx.sell_amount * tx.sell_fmv) - (tx.buy_amount * tx.buy_fmv)
+        if tx.__class__.__name__ == "ExchangeTx":
+            tx.implied_fee_usd = (tx.sell_amount * tx.sell_fmv) - (
+                tx.buy_amount * tx.buy_fmv
+            )
             tx.implied_fee_usd = round(tx.implied_fee_usd, 2)
-        if tx.__class__.__name__ == 'Shapeshift':
-            tx.implied_fee_usd = (tx.send.amount * tx.send.fmv) - (tx.receive.amount * tx.receive.fmv)
+        if tx.__class__.__name__ == "Shapeshift":
+            tx.implied_fee_usd = (tx.send.amount * tx.send.fmv) - (
+                tx.receive.amount * tx.receive.fmv
+            )
             tx.implied_fee_usd = round(tx.implied_fee_usd, 2)
-        if tx.__class__.__name__ == 'SendReceive':
+        if tx.__class__.__name__ == "SendReceive":
             tx.implied_fee_usd = tx.implied_fee * tx.fmv
     return transactions

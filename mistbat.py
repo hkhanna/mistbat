@@ -7,7 +7,12 @@ from xdg import XDG_CONFIG_HOME, XDG_DATA_HOME
 from coinmarketcap import Market
 from cryptocompare import get_historical_close
 from events import get_events
-from transactions import get_transactions, annotate_transactions, fmv_transactions, imply_fees
+from transactions import (
+    get_transactions,
+    annotate_transactions,
+    fmv_transactions,
+    imply_fees,
+)
 from tax import Form8949
 
 
@@ -90,17 +95,9 @@ def lsev(remote_update):
     is_flag=True,
     default=False,
 )
+@click.option("--no-annotations", help="Omit annotations", is_flag=True, default=False)
 @click.option(
-    "--no-annotations",
-    help="Omit annotations",
-    is_flag=True,
-    default=False,
-)
-@click.option(
-    "--minimal",
-    help="Omit everything other than headline",
-    is_flag=True,
-    default=False
+    "--minimal", help="Omit everything other than headline", is_flag=True, default=False
 )
 def lstx(no_group, no_annotations, minimal):
     """List all transactions that have been derived from events and annotated."""
@@ -131,6 +128,7 @@ def lstx(no_group, no_annotations, minimal):
     print("{} total transactions".format(len(transactions)))
     print_usd_exposure()
 
+
 @cli.command()
 def fees():
     events = get_events(loaders.all)
@@ -146,43 +144,39 @@ def fees():
     for tx in transactions:
         fees[tx.__class__.__name__] = fees.get(tx.__class__.__name__, 0) + tx.fee_usd
     for k, v in fees.items():
-        print(f"{k}: USD {v:0.2f}") 
-    print('TOTAL: USD {:0.2f}\n'.format(sum(fees.values())))
+        print(f"{k}: USD {v:0.2f}")
+    print("TOTAL: USD {:0.2f}\n".format(sum(fees.values())))
 
     print("\nFees Incurred (negative values ignored)")
     print("-----------------------------------------")
     fees = {}
     for tx in transactions:
-        fees[tx.__class__.__name__] = fees.get(tx.__class__.__name__, 0) + max(tx.fee_usd, 0)
+        fees[tx.__class__.__name__] = fees.get(tx.__class__.__name__, 0) + max(
+            tx.fee_usd, 0
+        )
     for k, v in fees.items():
-        print(f"{k}: USD {v:0.2f}") 
-    print('TOTAL: USD {:0.2f}\n'.format(sum(fees.values())))
-
+        print(f"{k}: USD {v:0.2f}")
+    print("TOTAL: USD {:0.2f}\n".format(sum(fees.values())))
 
 
 @cli.command()
-@click.option(
-    "--verbose",
-    help="Print progress",
-    is_flag=True,
-    default=False,
-)
+@click.option("--verbose", help="Print progress", is_flag=True, default=False)
 def updatefmv(verbose):
     """Update the tx_fmv.yaml file for any missing figures"""
     # Load storage file and events and transactions
     try:
-        fmv_raw = yaml.load(open(XDG_DATA_HOME + '/mistbat/tx_fmv.yaml'))
+        fmv_raw = yaml.load(open(XDG_DATA_HOME + "/mistbat/tx_fmv.yaml"))
     except FileNotFoundError:
         fmv_raw = {}
     fmv_data = {}
     for id in fmv_raw:
-        fmvs = fmv_raw[id].split(' -- ')
+        fmvs = fmv_raw[id].split(" -- ")
         comment = None
-        if len(fmvs) == 2: # If there is a comment
+        if len(fmvs) == 2:  # If there is a comment
             comment = fmvs[1]
         fmvs = fmvs[0].split()
-        fmvs = {fmv.split('@')[0]: fmv.split('@')[1] for fmv in fmvs}
-        fmvs['comment'] = comment
+        fmvs = {fmv.split("@")[0]: fmv.split("@")[1] for fmv in fmvs}
+        fmvs["comment"] = comment
         fmv_data[id] = fmvs
 
     events = get_events(loaders.all)
@@ -195,51 +189,55 @@ def updatefmv(verbose):
     stored = [tx for tx in transactions if tx.id in fmv_data]
     for tx in stored:
         stored_coins = set(fmv_data[tx.id].keys())
-        stored_coins.remove('comment')
+        stored_coins.remove("comment")
         if set(tx.affected_coins) != stored_coins:
-            raise RuntimeError(f'Transaction {tx.id} does not have correct fmv info')
-    
-    # Confirm that the tx_fmv file doesn't have any unknown tx ids
-    diff = set(id for id in fmv_data) - set(tx.id for tx in transactions) 
-    diff = ', '.join(diff)
-    if len(diff) != 0:
-        raise RuntimeError(f'Unrecognized transaction ids in tx_fmv.yaml: {diff}. Tip: Dont inlude fiat transaction fmvs.')
+            raise RuntimeError(f"Transaction {tx.id} does not have correct fmv info")
 
-    # Fill remaining missing transactions with public closing price 
-    print(f'{len(missing)} missing transactions') if verbose else None
+    # Confirm that the tx_fmv file doesn't have any unknown tx ids
+    diff = set(id for id in fmv_data) - set(tx.id for tx in transactions)
+    diff = ", ".join(diff)
+    if len(diff) != 0:
+        raise RuntimeError(
+            f"Unrecognized transaction ids in tx_fmv.yaml: {diff}. Tip: Dont inlude fiat transaction fmvs."
+        )
+
+    # Fill remaining missing transactions with public closing price
+    print(f"{len(missing)} missing transactions") if verbose else None
     for tx in missing:
-        print(f'{tx.id}')
-        fmv_data[tx.id] = { "comment": "from crytpocompare daily close api" }
+        print(f"{tx.id}")
+        fmv_data[tx.id] = {"comment": "from crytpocompare daily close api"}
         for coin in tx.affected_coins:
             coin_fmv = get_historical_close(coin, int(tx.time.timestamp()))
             fmv_data[tx.id][coin] = coin_fmv
-            print(f'{coin}@{coin_fmv}\n') if verbose else None
+            print(f"{coin}@{coin_fmv}\n") if verbose else None
             time.sleep(0.1)
-        
+
     # Convert fmv_data back into fmv_raw and dump to disk
     fmv_raw = {}
     for id, coins in fmv_data.items():
-        comment = coins.pop('comment')
-        fmv_raw[id] = ' '.join(f'{coin}@{price}' for coin, price in coins.items())
+        comment = coins.pop("comment")
+        fmv_raw[id] = " ".join(f"{coin}@{price}" for coin, price in coins.items())
         if comment:
-            fmv_raw[id] += ' -- ' + comment
+            fmv_raw[id] += " -- " + comment
 
-    yaml.dump(fmv_raw, open(XDG_DATA_HOME + '/mistbat/tx_fmv.yaml', 'w'), default_flow_style=False)
+    yaml.dump(
+        fmv_raw,
+        open(XDG_DATA_HOME + "/mistbat/tx_fmv.yaml", "w"),
+        default_flow_style=False,
+    )
+
 
 @cli.command()
 @click.option(
-    "--aggregate",
+    "--aggregated",
     help="Aggregate single dispositions that can be traced to multiple acquisitions",
     is_flag=True,
     default=False,
 )
 @click.option(
-    "--year",
-    help="Limit report to a particular year",
-    is_flag=False,
-    default=None
+    "--year", help="Limit report to a particular year", is_flag=False, default=None
 )
-def tax(aggregate, year):
+def tax(aggregated, year):
     """Generate the information needed for IRS Form 8949"""
     events = get_events(loaders.all)
     transactions = get_transactions(events, XDG_CONFIG_HOME + "/mistbat/tx_match.yaml")
@@ -265,7 +263,7 @@ def tax(aggregate, year):
         ]
     )
     total_gain = 0.00
-    for line in form_8949.generate_form(term='short', aggregate=aggregate, year=year):
+    for line in form_8949.generate_form(term="short", aggregated=aggregated, year=year):
         table.add_row(line)
         if str(line[-1]).strip():
             total_gain += line[-1]
@@ -284,12 +282,13 @@ def tax(aggregate, year):
         ]
     )
     total_gain = 0.00
-    for line in form_8949.generate_form(term='long', aggregate=aggregate, year=year):
+    for line in form_8949.generate_form(term="long", aggregated=aggregated, year=year):
         table.add_row(line)
         if str(line[-1]).strip():
             total_gain += line[-1]
     print(table)
     print(f"TOTAL LONG-TERM CAPITAL GAIN: USD {total_gain:0.2f}")
+
 
 @cli.command()
 def currentbasis():
@@ -305,10 +304,11 @@ def currentbasis():
 
     form_8949 = Form8949(transactions)
     print("\nAVAILABLE BASIS REPORT")
-    print("Note: This will slighly deviate from holdings results since SENDRECV fees do not impact basis.\n")
+    print(
+        "Note: This will slighly deviate from holdings results since SENDRECV fees do not impact basis.\n"
+    )
     for coin, basis in form_8949.current_available_basis().items():
         print(f"{coin}: USD {basis}")
-
 
 
 @cli.command()
@@ -410,18 +410,20 @@ def holdings(aggregated):
     print("-----------------")
     print("Total Portfolio Value: USD {:.2f}".format(total_usd))
 
+
 @cli.command()
-@click.argument('exchange')
+@click.argument("exchange")
 def remoteupdate(exchange):
     """Fetch updated coinbase information from remote"""
-    if exchange == 'coinbase':
+    if exchange == "coinbase":
         loaders.coinbase.update_from_remote()
-    elif exchange == 'gdax':
+    elif exchange == "gdax":
         loaders.gdax.update_from_remote()
-    elif exchange == 'binance':
+    elif exchange == "binance":
         loaders.binance.update_from_remote()
     else:
         print("Bad exchange specified.")
+
 
 if __name__ == "__main__":
     cli()

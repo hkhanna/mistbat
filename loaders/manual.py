@@ -27,7 +27,7 @@ def parse_events():
                 buy_fmv=obs.get("buy_fmv", None),
                 sell_fmv=obs.get("sell_fmv", None),
                 fee_with=obs.get("fee_with", None),
-                fee_amount=obs.get("fee_amount", None)
+                fee_amount=obs.get("fee_amount", None),
             )
             events.append(exchange)
 

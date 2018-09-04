@@ -1,4 +1,4 @@
-#pylint: disable=E1101
+# pylint: disable=E1101
 import dateutil.parser
 import datetime
 import pytz
@@ -12,10 +12,10 @@ class Event:
             setattr(self, name, val)
 
         # Make sure that if buy_fmv is provided, so is sell_fmv and vice versa
-        if kwargs.get('buy_fmv'):
-            assert kwargs.get('sell_fmv') is not None
-        if kwargs.get('sell_fmv'):
-            assert kwargs.get('buy_fmv') is not None
+        if kwargs.get("buy_fmv"):
+            assert kwargs.get("sell_fmv") is not None
+        if kwargs.get("sell_fmv"):
+            assert kwargs.get("buy_fmv") is not None
 
         # Parse strings into datetime
         if type(self.time) == str:
@@ -31,12 +31,12 @@ class Event:
         else:
             self.time = self.time.astimezone(pytz.utc)
 
-       # Generate unique ID based on available info
+        # Generate unique ID based on available info
         self.generate_id()
 
         # Get rid of any sub-second resolution
         self.time = self.time.replace(microsecond=0)
- 
+
     def generate_id(self):
         id = self.location[:3]
         # If there's an id provided by the exchange leverage that
@@ -170,7 +170,6 @@ def get_events(loaders, typ=None, remote_update=False):
             loader.update_from_remote()
         all_events.extend(loader.parse_events())
 
-    # TODO: create another function in the liqui loader for anything else to be done
     # TODO: confirm all events have unique id attribute
 
     # Sort all events by time

@@ -1,10 +1,13 @@
 import pytz
 import datetime as dt
 
+
 def _held_1yr(acquired, disposed):
     """Determine whether the trade qualifies for LT treatment"""
     acquired = acquired.date()
-    min_date = dt.date(year= acquired.year + 1, month=acquired.month, day= acquired.day + 1)
+    min_date = dt.date(
+        year=acquired.year + 1, month=acquired.month, day=acquired.day + 1
+    )
     if disposed.date() >= min_date:
         return True
     else:
@@ -36,13 +39,13 @@ class Form8949(object):
             basis[asset.coin] = round(asset.current_available_basis(), 8)
         return basis
 
-    def generate_form(self, term, aggregate, year):
+    def generate_form(self, term, aggregated, year):
         """Term argument is 'short', 'long' or 'all'. Aggregate is whether to have a single disposition that is traced to multiple acquisitions appear as a single row."""
         all_rows = []
         for asset in self.assets.values():
-            tax_history = asset.tax_history(term, aggregate, year)
+            tax_history = asset.tax_history(term, aggregated, year)
             if len(tax_history):
-                all_rows.append([' ']*6)
+                all_rows.append([" "] * 6)
             all_rows.extend(tax_history)
         return all_rows
 
@@ -62,14 +65,18 @@ class Asset(object):
         available_basis = self._tx_used_basis(self.transactions[-1], True)
         return sum(basis[1] for basis in available_basis)
 
-    def tax_history(self, term, aggregate, year):
+    def tax_history(self, term, aggregated, year):
         self.transactions.sort(key=lambda x: x.time)
         tax_history = []
         for tx in self.transactions:
             if year and tx.time.year != int(year):
                 continue
-            used_basis = self._tx_used_basis(tx) # What basis did the tx use up, if any.
-            tax_impact = self._tax_impact(tx, used_basis, term, aggregate) # Calculate the tax impact of the tx based on the used basis and in the way we specify
+            used_basis = self._tx_used_basis(
+                tx
+            )  # What basis did the tx use up, if any.
+            tax_impact = self._tax_impact(
+                tx, used_basis, term, aggregated
+            )  # Calculate the tax impact of the tx based on the used basis and in the way we specify
             if tax_impact:
                 tax_history.extend(tax_impact)
         return tax_history
@@ -90,8 +97,10 @@ class Asset(object):
                     basis = list(basis)
                     if (amount_realized[1] - matched_ar) < basis[1]:
                         # Chews up some but not all of this basis item
-                        available_basis[0][1] -= (amount_realized[1] - matched_ar)
-                        used_basis += [[basis[0], (amount_realized[1] - matched_ar), basis[2]]]
+                        available_basis[0][1] -= amount_realized[1] - matched_ar
+                        used_basis += [
+                            [basis[0], (amount_realized[1] - matched_ar), basis[2]]
+                        ]
                         matched_ar += amount_realized[1] - matched_ar
                         break
                     elif (amount_realized[1] - matched_ar) >= basis[1]:
@@ -106,7 +115,7 @@ class Asset(object):
                 else:
                     return used_basis
 
-    def _tax_impact(self, tx, used_basis, term, aggregate):
+    def _tax_impact(self, tx, used_basis, term, aggregated):
         # If this is the transaction of interest, we need to report the used basis aka rows of 8949
         # Map each item of used_basis into a row of Form 8949
         amount_realized = tx.amount_realized(self.coin)
@@ -115,7 +124,14 @@ class Asset(object):
             return []
 
         rows = []
-        aggregated_row = [amount_realized[1], None, amount_realized[0], 0.00, 0.00, 0.00]
+        aggregated_row = [
+            amount_realized[1],
+            None,
+            amount_realized[0],
+            0.00,
+            0.00,
+            0.00,
+        ]
         for basis in used_basis:
             description = f"{self.coin} {round(basis[1], 8):12.8f}"
             date_acquired = basis[0]
@@ -124,10 +140,10 @@ class Asset(object):
             tx_basis = basis[1] * basis[2]
             gain = proceeds - tx_basis
 
-            if term == 'short' and _held_1yr(date_acquired, date_sold):
+            if term == "short" and _held_1yr(date_acquired, date_sold):
                 continue
-            
-            if term == 'long' and not _held_1yr(date_acquired, date_sold):
+
+            if term == "long" and not _held_1yr(date_acquired, date_sold):
                 continue
 
             rows.append(
@@ -137,15 +153,15 @@ class Asset(object):
                     date_sold,
                     round(proceeds, 2),
                     round(tx_basis, 2),
-                    round(gain, 2)
+                    round(gain, 2),
                 )
             )
 
             if aggregated_row[1] is None:
                 aggregated_row[1] = date_acquired
             else:
-                aggregated_row[1] = 'Various'
-            
+                aggregated_row[1] = "Various"
+
             aggregated_row[3] += proceeds
             aggregated_row[4] += tx_basis
             aggregated_row[5] += gain
@@ -155,8 +171,10 @@ class Asset(object):
         aggregated_row[4] = round(aggregated_row[4], 2)
         aggregated_row[5] = round(aggregated_row[5], 2)
 
-        if aggregated_row[1] is None: 
-            aggregated_row = None # If no entries for that holding period, don't add anything to the table
+        if aggregated_row[1] is None:
+            aggregated_row = (
+                None
+            )  # If no entries for that holding period, don't add anything to the table
         else:
             aggregated_row = [aggregated_row]
-        return aggregated_row if aggregate else rows
+        return aggregated_row if aggregated else rows

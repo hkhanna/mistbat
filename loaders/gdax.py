@@ -13,7 +13,7 @@ def update_from_remote():
     )
 
     # Get list of USD products
-    product_ids = [p["id"] for p in client.get_products() if p["id"][-3:] == 'USD']
+    product_ids = [p["id"] for p in client.get_products() if p["id"][-3:] == "USD"]
 
     # Exchange history is in the "fills" API
     # No need for deposit/withdrawal info since that is in the Coinbase data

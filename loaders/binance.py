@@ -20,7 +20,7 @@ def update_from_remote():
 
     trades = {}
     print(f"Total pairs to loop through: {len(all_pairs)}")
-    for index, pair in enumerate(all_pairs ):
+    for index, pair in enumerate(all_pairs):
         if index % 10 == 0:
             print(f"Currently: {index}")
         trades[pair] = client.get_my_trades(symbol=pair)

@@ -78,7 +78,7 @@ def parse_events():
         "send",
         "exchange_withdrawal",
         "exchange_deposit",
-        "pro_deposit", # "pro" looks like it means the same thing as "exchange", i.e., do nothing.
+        "pro_deposit",  # "pro" looks like it means the same thing as "exchange", i.e., do nothing.
         "pro_withdrawal",
         "fiat_deposit",
         "fiat_withdrawal",
