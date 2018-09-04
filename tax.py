@@ -36,7 +36,7 @@ class Form8949(object):
     def current_available_basis(self):
         basis = {}
         for asset in self.assets.values():
-            basis[asset.coin] = round(asset.current_available_basis(), 8)
+            basis[asset.coin] = asset.current_available_basis()
         return basis
 
     def generate_form(self, term, aggregated, year):
@@ -63,7 +63,7 @@ class Asset(object):
     def current_available_basis(self):
         self.transactions.sort(key=lambda x: x.time)
         available_basis = self._tx_used_basis(self.transactions[-1], True)
-        return sum(basis[1] for basis in available_basis)
+        return available_basis
 
     def tax_history(self, term, aggregated, year):
         self.transactions.sort(key=lambda x: x.time)

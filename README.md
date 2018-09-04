@@ -6,7 +6,8 @@
 - `python mistbat.py lstx [--no-group]` - list all transactions
 - `python mistbat.py holdings [--aggregated]` - list all current holdings
 - `python mistbat.py updatefmv` - update any missing fmvs
-- `python mistbat.py tax` - prepare form 8949
+- `python mistbat.py tax [--aggregated] [--year]` - prepare form 8949. Use the aggregated switch and pass the year.
+- `python mistbat.py currentbasis [--harvest]` - show available basis, with optional insight into how to harvest tax losses
 
 ## Configuration
 All configuration files are stored in `~/.config/mistbat/` or another directory defined by the XDG_CONFIG_HOME environment variables.

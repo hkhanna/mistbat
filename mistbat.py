@@ -291,7 +291,14 @@ def tax(aggregated, year):
 
 
 @cli.command()
-def currentbasis():
+@click.option(
+    "--harvest",
+    help="Add column showing cumulative gain or loss of selling that particular coin",
+    is_flag=True,
+    default=False,
+)
+def currentbasis(harvest):
+    """See available basis by coin"""
     events = get_events(loaders.all)
     transactions = get_transactions(events, XDG_CONFIG_HOME + "/mistbat/tx_match.yaml")
     transactions = annotate_transactions(
@@ -305,10 +312,44 @@ def currentbasis():
     form_8949 = Form8949(transactions)
     print("\nAVAILABLE BASIS REPORT")
     print(
-        "Note: This will slighly deviate from holdings results since SENDRECV fees do not impact basis.\n"
+        "Note: Coin totals will slighly deviate from 'holdings' since SENDRECV fees do not impact basis.\n"
     )
-    for coin, basis in form_8949.current_available_basis().items():
-        print(f"{coin}: USD {basis}")
+    table_headings = [
+        "Coin",
+        "Date Acquired",
+        "Amount",
+        "Basis per Coin",
+        "Total Basis",
+    ]
+    if harvest:
+        table_headings.append("Cum. G/L at Spot Price")
+        spot_prices = get_coin_spot_prices(
+            set(form_8949.current_available_basis().keys()), max_requests=7
+        )
+    table = PrettyTable(table_headings)
+
+    for coin, available_basis in form_8949.current_available_basis().items():
+        coin_usd_total = 0.00
+        coin_amount_total = 0.00
+        cumulative_gain_or_loss = 0.00
+        for basis in available_basis:
+            time = basis[0].strftime("%Y-%m-%d %H:%M:%S")
+            amount = round(basis[1], 8)
+            fmv = round(basis[2], 2)
+            total = round(amount * fmv, 2)
+            row = [coin, time, amount, fmv, total]
+            if harvest:
+                cumulative_gain_or_loss += (spot_prices[coin] * amount) - (fmv * amount)
+                row.append(round(cumulative_gain_or_loss, 2))
+            table.add_row(row)
+            coin_usd_total += total
+            coin_amount_total += amount
+        row = ["", "TOTAL", round(coin_amount_total, 8), "", round(coin_usd_total, 2)]
+        if harvest:
+            row.append("")
+        table.add_row(row)
+        table.add_row([" "] * len(table.field_names))
+    print(table)
 
 
 @cli.command()
