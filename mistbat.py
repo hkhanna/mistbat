@@ -32,7 +32,7 @@ def print_usd_exposure():
     print("Aggregate Fee %: {:.2f}%".format(fees * 100 / (invested - redeemed)))
 
 
-def get_coin_spot_prices(coins, max_requests=2, size_requests=100):
+def get_coin_spot_prices(coins, max_requests=2, missing_is_0=False, size_requests=100):
     """Return spot prices of passed coin symbols.
 
     Arguments:
@@ -59,10 +59,16 @@ def get_coin_spot_prices(coins, max_requests=2, size_requests=100):
             spot_prices[symbol] = coin["quotes"]["USD"]["price"]
             if set(spot_prices.keys()) == coins:
                 return spot_prices
+
     missing = coins - set(spot_prices.keys())
-    raise RuntimeError(
-        f"Did not get spot prices for symbols: {missing} . Increase max_requests in get_spot_prices"
-    )
+    if missing_is_0:
+        for coin in missing:
+            spot_prices[coin] = 0.00
+        return spot_prices
+    else:
+        raise RuntimeError(
+            f"Did not get spot prices for symbols: {missing}. Increase max_requests in get_spot_prices or set --missing-0 flag."
+        )
 
 
 @click.group()
@@ -359,7 +365,13 @@ def currentbasis(harvest):
     is_flag=True,
     default=False,
 )
-def holdings(aggregated):
+@click.option(
+    "--missing-0",
+    help="Assuming any missing spot values are coins that have collapsed to $0.00 value",
+    is_flag=True,
+    default=False
+)
+def holdings(aggregated, missing_0):
     """List all coins held with USD values. Also list holdings by exchange."""
     totals = {}
     events = get_events(loaders.all)
@@ -391,7 +403,7 @@ def holdings(aggregated):
     my_coins.remove("USD")
 
     # Poll coinmarketcap API for spot prices of all coins and store them in a dict
-    coin_spotprices = get_coin_spot_prices(my_coins, max_requests=7)
+    coin_spotprices = get_coin_spot_prices(my_coins, missing_is_0=missing_0, max_requests=7)
 
     total_usd = 0
     location_usd = {}
