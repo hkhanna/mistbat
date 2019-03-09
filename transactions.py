@@ -24,12 +24,13 @@ class Transaction:
         if annotated:
             desc += "\n   |-> Groups: {}".format(groups)
         if implied_fee is not None:
-            desc += "\n   |-> Implied Fee: USD {}".format(self.implied_fee_usd)
+            desc += "\n   |-> Implied Fee: USD {:.2f}".format(self.implied_fee_usd)
         if reported_fee is not None:
             desc += "\n   |-> Reported Fee: {} {}".format(
                 self.fee_amount, self.fee_with
             )
-            if self.fee_with != "USD":
+            if self.fee_with != "USD" and self.fee_with != "BNB": 
+                # BNB thing is a hack bc I don't want track FMV of BNB, which is not the buy or the sell coin.
                 if self.fee_with == self.buy_coin:
                     converted_fee = self.buy_fmv * self.fee_amount
                 elif self.fee_with == self.sell_coin:
