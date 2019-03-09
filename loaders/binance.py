@@ -1,6 +1,7 @@
 import json
 from events import *
 from xdg import XDG_DATA_HOME, XDG_CONFIG_HOME
+import time
 
 
 def update_from_remote():
@@ -23,7 +24,13 @@ def update_from_remote():
     for index, pair in enumerate(all_pairs):
         if index % 10 == 0:
             print(f"Currently: {index}")
-        trades[pair] = client.get_my_trades(symbol=pair)
+        try:
+            trades[pair] = client.get_my_trades(symbol=pair)
+        except:
+            print("API limit exceeded. Pausing for 60 seconds.")
+            time.sleep(61)
+            trades[pair] = client.get_my_trades(symbol=pair)
+            
 
         # 500 trades max per pair
         assert len(trades[pair]) < 500
