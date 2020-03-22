@@ -31,6 +31,18 @@ def parse_events():
             )
             events.append(exchange)
 
+        elif obs["type"] == "fiat-exchange":
+            fexchange = FiatExchange(
+                time=obs["time"],
+                location=obs["location"],
+                buy_coin=obs["buy_coin"],
+                buy_amount=float(obs["buy_amount"]),
+                sell_coin=obs["sell_coin"],
+                sell_amount=float(obs["sell_amount"]),
+                fee_with=obs.get("fee_with", None),
+                fee_amount=obs.get("fee_amount", None),
+            )
+            events.append(fexchange)
         elif obs["type"] == "send":
             send = Send(
                 time=obs["time"],

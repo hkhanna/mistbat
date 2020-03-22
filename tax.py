@@ -108,7 +108,7 @@ class Asset(object):
                         del available_basis[0]
                         used_basis += [basis]
                         matched_ar += basis[1]
-                assert matched_ar == amount_realized[1], "Not enough basis to match"
+                assert round(matched_ar, 8) == round(amount_realized[1], 8), "Not enough basis to match"
             if tx == tx_iter:
                 if return_available_basis:
                     return available_basis
