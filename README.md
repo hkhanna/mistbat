@@ -1,4 +1,10 @@
 # mistbat cryptocurrency portfolio and tax analyzer
+## Installation
+```
+git clone git@github.com:hkhanna/mistbat.git
+cd mistbat
+pip install -r requirements.txt
+```
 ## Usage
 `python mistbat.py --help` - information on commands and options
 
@@ -8,6 +14,10 @@
 - `python mistbat.py updatefmv` - update any missing fmvs
 - `python mistbat.py tax [--aggregated] [--year]` - prepare form 8949. Use the aggregated switch and pass the year.
 - `python mistbat.py currentbasis [--harvest]` - show available basis, with optional insight into how to harvest tax losses
+- `python mistbat.py remoteupdate <exchange>` - update transactions from remote
+
+Every tax season, I run `remoteupdate` on the exchanges I use (usually coinbase and gdax). Then, I edit `manual_obs.yaml` to add electrum events and update `tx_match.yaml` to match up events into transactions. 
+From there, the `tax --aggregated --year <year>` command usually gives me what I need.
 
 ## Configuration
 All configuration files are stored in `~/.config/mistbat/` or another directory defined by the XDG_CONFIG_HOME environment variables.
