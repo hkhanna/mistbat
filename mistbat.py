@@ -4,8 +4,7 @@ import loaders
 import yaml
 from prettytable import PrettyTable
 from xdg import XDG_CONFIG_HOME, XDG_DATA_HOME
-from coinmarketcap import Market
-from cryptocompare import get_historical_close
+from cryptocompare import get_historical_close, get_coin_spot_prices
 from events import get_events
 from transactions import (
     get_transactions,
@@ -30,45 +29,6 @@ def print_usd_exposure():
         )
     )
     print("Aggregate Fee %: {:.2f}%".format(fees * 100 / (invested - redeemed)))
-
-
-def get_coin_spot_prices(coins, max_requests=2, missing_is_0=False, size_requests=100):
-    """Return spot prices of passed coin symbols.
-
-    Arguments:
-    coins (list of str) -- coins to get spot prices for
-    max_requests (int) -- maximum number of requests to the coinmarketcap API
-    size_requests (int) -- size of each request to coinmarketcap API (max: 100)
-    """
-    spot_prices = {}
-    for req in range(max_requests):
-        start = req * size_requests
-        batch = Market().ticker(start=start, limit=size_requests)
-        batch_size = len(batch["data"])
-        if batch_size != size_requests:
-            raise RuntimeError(
-                f"Batch size {batch_size} does not match requested size {size_requests} on request number {req}"
-            )
-
-        for coin in batch["data"].values():
-            symbol = coin["symbol"]
-            if symbol not in coins or symbol in spot_prices:
-                # If two or more coins have the same symbol, this will use the higher-ranked one
-                continue
-
-            spot_prices[symbol] = coin["quotes"]["USD"]["price"]
-            if set(spot_prices.keys()) == coins:
-                return spot_prices
-
-    missing = coins - set(spot_prices.keys())
-    if missing_is_0:
-        for coin in missing:
-            spot_prices[coin] = 0.00
-        return spot_prices
-    else:
-        raise RuntimeError(
-            f"Did not get spot prices for symbols: {missing}. Increase max_requests in get_spot_prices or set --missing-0 flag."
-        )
 
 
 @click.group()
@@ -330,8 +290,7 @@ def currentbasis(harvest):
     if harvest:
         table_headings.append("Cum. G/L at Spot Price")
         spot_prices = get_coin_spot_prices(
-            set(form_8949.current_available_basis().keys()), max_requests=7
-        )
+            set(form_8949.current_available_basis().keys()))
     table = PrettyTable(table_headings)
 
     for coin, available_basis in form_8949.current_available_basis().items():
@@ -365,13 +324,7 @@ def currentbasis(harvest):
     is_flag=True,
     default=False,
 )
-@click.option(
-    "--missing-0",
-    help="Assuming any missing spot values are coins that have collapsed to $0.00 value",
-    is_flag=True,
-    default=False
-)
-def holdings(aggregated, missing_0):
+def holdings(aggregated):
     """List all coins held with USD values. Also list holdings by exchange."""
     totals = {}
     events = get_events(loaders.all)
@@ -403,7 +356,7 @@ def holdings(aggregated, missing_0):
     my_coins.remove("USD")
 
     # Poll coinmarketcap API for spot prices of all coins and store them in a dict
-    coin_spotprices = get_coin_spot_prices(my_coins, missing_is_0=missing_0, max_requests=7)
+    coin_spotprices = get_coin_spot_prices(my_coins)
 
     total_usd = 0
     location_usd = {}
