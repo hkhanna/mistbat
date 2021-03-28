@@ -36,6 +36,9 @@ def parse_events():
     with open(XDG_DATA_HOME + "/mistbat/gdax.json", "r") as f:
         json_data = json.load(f)
 
+    # Filter out the "message" garbage the API has started to return (2021)
+    json_data = [data for data in json_data if type(data) == dict]
+
     # Parse fiat buys into Exchange objects
     buys = [fill for fill in json_data if fill["side"] == "buy"]
     for buy in buys:
