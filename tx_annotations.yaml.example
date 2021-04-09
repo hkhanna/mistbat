@@ -1,0 +1,9 @@
+# You must have at least one item here. 
+# Use `python mistbat.py lstx --no-annotations` to get the transaction ids you can use.
+
+coix-23085:
+  notes: 'first foray into cryptocurrency'
+  groups: 'initial'
+srtx-a5/6f:
+  notes: 'testing sending to liqui to make sure coins do not vanish'
+  groups: 'liqui_altcoins' 

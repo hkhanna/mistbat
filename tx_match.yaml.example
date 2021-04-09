@@ -1,0 +1,36 @@
+# There must be a SendReceive key and a Shapeshift key. 
+# You create pairs matching the events ids you get from `python mistbat.py lsev`. 
+
+SendReceive:
+  - coi-ed3a5 liq-ce66f
+  - coi-7e973 liq-5f788
+  - coi-13de5 liq-1973c
+  - liq-ddf3b ele-fe0c1
+  - liq-86055 ele-d1b6a
+  - coi-7863c ele-3df6a
+  - liq-9b1f5 coi-3dd55
+  - coi-83d8f coi-57662
+  - coi-1487d ele-74bac
+  - coi-7c9e0 ele-7c919
+  - coi-d4219 bin-0ce57
+  - coi-ad373 bin-d0f45
+  - bin-6c9da ele-fa21c
+  - jax-d9c84 bin-52804
+  - bin-7fc89 ele-7a3c9
+  - coi-a9084 bin-26b0c
+  - coi-af337 bin-2683a
+  - coi-6ed6a bin-a3b57
+  - coi-4c255 bin-4a974
+  - coi-cc40c ele-15fb4
+  - coi-d26c4 ele-20146
+  - ele-8c534 coi-c5c7e 
+  - bin-46c9f ele-88d63
+  - coi-5a202 ele-6c86a
+  - coi-c9708 ele-18475
+  - coi-32aa0 ele-04e12
+  - coi-75434 ele-54a9b
+
+Shapeshift:
+  - ele-6fcda coi-83d49
+  - ele-4a74f jax-b2b83
+  - jax-38ea7 coi-d8838
