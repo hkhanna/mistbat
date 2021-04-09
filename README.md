@@ -40,11 +40,17 @@ gdax:
 ### tx_match.yaml
 Contains information on how to match Send and Recv events and Shapeshift events.
 
+See `tx_match.yaml.example` for the format.
+
 ### tx_annotations.yaml
 Annotations to apply to each transaction. Annotations are things like notes and which groups the transaction belongs to.
 
+See `tx_annotations.yaml.example` for the format.
+
 ### manual_obs.yaml
 Any manually specified observations go in this file. This would include things like transactions that are not on an exchange, e.g., between electrum wallets.
+
+See `manual_obs.yaml.example` for the format.
 
 ## How It Works
 ### Nomenclature 
