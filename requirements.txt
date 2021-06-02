@@ -12,6 +12,6 @@ pytz==2019.3
 PyYAML==3.13
 requests==2.20.0
 six==1.10.0
-urllib3==1.25.8
+urllib3==1.26.5
 websocket-client==0.40.0
 xdg==3.0.2
