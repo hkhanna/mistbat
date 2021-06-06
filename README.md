@@ -2,6 +2,7 @@
 ## Installation
 ```
 git clone git@github.com:hkhanna/mistbat.git
+(create venv if desired)
 cd mistbat
 pip install -r requirements.txt
 ```
