@@ -4,7 +4,7 @@ gdax==1.0.6
 prettytable==0.7.2
 python-dateutil==2.8.1
 pytz==2019.3
-PyYAML==3.13
+PyYAML==5.4
 xdg==3.0.2
 requests==2.13.0
 six==1.10.0
